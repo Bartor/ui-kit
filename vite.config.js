@@ -22,7 +22,7 @@ export default defineConfig({
   plugins: [react(), copyCss()],
   build: {
     lib: {
-      entry: ['index.js', 'map.js', 'charts.js', 'strings/pl.js'].map((f) => at(`src/${f}`)),
+      entry: ['index.ts', 'map.ts', 'charts.ts', 'strings/pl.ts'].map((f) => at(`src/${f}`)),
       formats: ['es'],
     },
     minify: false,

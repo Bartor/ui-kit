@@ -33,7 +33,7 @@ configure({ locale: 'pl-PL', strings: pl })  // English and en-GB without it
 
 The locale sets how numbers are written, in CSV files too. Any text can be
 replaced: `strings: { ...pl, total: 'suma' }`; the list is in
-[src/strings/en.js](src/strings/en.js).
+[src/strings/types.ts](src/strings/types.ts).
 
 Sizes are in rem, drawn for the 14px root that `base.css` sets. Colours are
 custom properties, listed at the top of [src/styles.css](src/styles.css):
@@ -100,15 +100,37 @@ On phones the sidebar and the details become bottom sheets by themselves.
 **Helpers** — `fmt`, `fmtEst`, `fixed`, `pct`, `slug`, `sqrtRadius`, `hourRuns`, `hoursOf`,
 `ramp`, `shade`, `inkOn`, `useSheetDrag`, `isPhone`, `HAS_HOVER`
 
-Props are described above each component in the source.
+Every component's props are typed and described: `Panel` takes `PanelProps`, and
+so on, all exported.
+
+### TypeScript
+
+Types are included. The map parts use Leaflet's, so a TypeScript project needs
+`@types/leaflet` beside it, and `skipLibCheck` with react-leaflet 4, whose own types do
+not check. TypeScript 5.4 or newer.
+
+Values keep their own types through the components, so options, search results,
+tree items and map points come back from callbacks as they went in:
+
+```tsx
+const [view, setView] = useState<'nodes' | 'roads'>('nodes')
+
+<RadioCards name="view" value={view} onChange={setView} options={[
+  { value: 'nodes', label: 'Junctions' },
+  { value: 'roads', label: 'Roads' },      // anything else is an error
+]} />
+
+<CircleLayer points={signals.map((s) => ({ key: s.id, lat: s.lat, lon: s.lon, r: 8, signal: s }))}
+  onPick={(p) => open(p.signal)} />
+```
 
 ### Linked highlighting
 
 The tree, the charts, the direction bars and the map dots light each other up.
 They share one value, `{ kind, id, dir? }` or `null`, kept by the app:
 
-```jsx
-const [hot, setHot] = useState(null)
+```tsx
+const [hot, setHot] = useState<Hot | null>(null)
 
 <PieceTree hot={hot} setHot={setHot} ... />
 <StackedHourBars kind="road" hot={hot} setHot={setHot} ... />
@@ -121,6 +143,7 @@ const [hot, setHot] = useState(null)
 ```sh
 npm run dev      # the gallery, on the sources
 npm test
+npm run typecheck
 npm run build    # dist/
 ```
 
