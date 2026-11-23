@@ -1,0 +1,62 @@
+{
+  "name": "@bartor-net/ui-kit",
+  "version": "0.1.0",
+  "description": "React components for maps of city data: sidebar and controls, detail panels, hourly charts, modal-split pies, Leaflet layers",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bartor/ui-kit.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./map": "./dist/map.js",
+    "./charts": "./dist/charts.js",
+    "./pl": "./dist/strings/pl.js",
+    "./styles.css": "./dist/styles.css",
+    "./base.css": "./dist/base.css",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "dev": "vite --config vite.demo.config.js",
+    "build": "vite build",
+    "test": "vitest run",
+    "prepack": "vitest run && vite build"
+  },
+  "peerDependencies": {
+    "leaflet": "^1.9.4",
+    "react": ">=18",
+    "react-dom": ">=18",
+    "react-leaflet": ">=4.2",
+    "recharts": "^2.15.0"
+  },
+  "peerDependenciesMeta": {
+    "leaflet": {
+      "optional": true
+    },
+    "react-leaflet": {
+      "optional": true
+    },
+    "recharts": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "leaflet": "^1.9.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-leaflet": "^4.2.1",
+    "recharts": "^2.15.0",
+    "vite": "^6.0.7",
+    "vitest": "^3.2.7"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
