@@ -50,6 +50,16 @@ export interface DataTableColumn {
   first?: SortDir
 }
 
+/** A small link-like button on a row. */
+export interface DataTableAction {
+  /** For React; defaults to the position. */
+  key?: string
+  label: ReactNode
+  onClick: () => void
+  /** Its tooltip, and its accessible name when `label` is not plain text. */
+  title?: string
+}
+
 export interface DataTableRow {
   /** Unique in the whole table (groups included): rows are sorted by it. */
   id: string
@@ -61,7 +71,11 @@ export interface DataTableRow {
   /** Behind a "?" on the row; unfolds under it. Without it there is no "?". */
   help?: ReactNode
   /** A small link-like button under the label. */
-  action?: { label: ReactNode; onClick: () => void }
+  action?: DataTableAction
+  /** More of them, after `action` if that is given too. They sit on the first line of the label cell with the "?" and
+   *  the sort icon, wrapping under each other when the label column is narrow. Each is a button of its own in the tab
+   *  order and does not sort the row. */
+  actions?: readonly DataTableAction[]
   /** With `sortBy="row"`: which way is better; `lower` makes the first click ascending. Otherwise descending first. */
   better?: Better
   /** With `sortBy="row"`: set to false to leave this row without a sort control. */
@@ -438,6 +452,7 @@ export function DataTable({
                     {r.label}{r.unit != null && r.unit !== '' && <small className="kit-data-unit"> {r.unit}</small>}
                   </span>
                 )
+                const acts = [...(r.action ? [r.action] : []), ...(r.actions ?? [])]
                 const out = [
                   <tr key={k} className={sortRow === r ? 'sorted' : undefined}>
                     <th scope="row" className="kit-data-label" aria-sort={sortRow === r ? ariaSort(current?.dir) : undefined}>
@@ -448,10 +463,17 @@ export function DataTable({
                               onClick={() => change(r.id, name, first)}>{text}</button>
                           )
                           : text}
-                        {(rowSortable || r.help || r.action) && (
+                        {(rowSortable || r.help || acts.length > 0) && (
                           <span className="kit-data-tools">
-                            {r.action && (
-                              <button type="button" className="kit-data-action" onClick={r.action.onClick}>{r.action.label}</button>
+                            {acts.length > 0 && (
+                              <span className="kit-data-actions">
+                                {acts.map((a, n) => (
+                                  <button key={a.key ?? n} type="button" className="kit-data-action" onClick={a.onClick}
+                                    title={a.title} aria-label={a.title && typeof a.label !== 'string' ? a.title : undefined}>
+                                    {a.label}
+                                  </button>
+                                ))}
+                              </span>
                             )}
                             {r.help && <HelpButton open={open} onClick={() => flip(openRows, setOpenRows, k)} />}
                             {rowSortable && (

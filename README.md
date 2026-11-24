@@ -160,6 +160,11 @@ together and hides the headings while it does. Cell tones are `best` (bold), `we
 a missing cell is a dimmed dash (`empty`). The pure parts, `compareValues` and `sortOrder`,
 are exported for sorting your own lists the same way.
 
+A row can carry several small buttons: `action` (one) and `actions` (a list, `{ key?, label, onClick, title? }`,
+after `action` when both are given). They sit on the first line of the label cell with the "?" and the sort icon, wrap
+under each other in a narrow column, and are separate buttons in the tab order that never sort the row. `title` is the
+tooltip, and the accessible name when `label` is not plain text.
+
 **The row header and where sorting lives.** In a table that sorts by row, each row header is one line: the label
 (with its unit in small print), then at the right edge the action, the "?" and the sort icon. When the label column
 is narrow the label wraps on word boundaries, to two lines and then cut with the whole text as a tooltip, and the

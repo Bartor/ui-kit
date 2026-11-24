@@ -81,6 +81,7 @@ const mark = (vals: (number | null)[], i: number, better: 'higher' | 'lower' | n
 const MEASURE_ROWS: DataTableRow[] = MEASURES.map(([id, label, unit, better, vals]) => ({
   id, label, unit, better, help: <p>What “{label.toLowerCase()}” counts, and where it comes from.</p>,
   action: id === 'reach' ? { label: 'on the map', onClick: () => {} } : undefined,
+  actions: id === 'reach' ? [{ label: 'about it', title: 'Open the page about this measure', onClick: () => {} }] : undefined,
   cells: vals.map((v, i) => (v == null ? null : { content: kit.fixed(v, v % 1 ? 1 : 0), value: v, tone: mark(vals, i, better) })),
 }))
 

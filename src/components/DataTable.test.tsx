@@ -138,7 +138,28 @@ describe('DataTable, the row header and where sorting lives', () => {
   it('puts the action in the controls beside the label, not under it', () => {
     const s = html(<DataTable caption="T" columns={cities} sortBy="row" rows={[
       { id: 'x', label: 'X', better: 'higher', action: { label: 'on the map', onClick: () => {} }, cells: [cell(1)] }]} />)
-    expect(s).toMatch(/<span class="kit-data-tools"><button type="button" class="kit-data-action">on the map<\/button>/)
+    expect(s).toMatch(/<span class="kit-data-tools"><span class="kit-data-actions"><button type="button" class="kit-data-action">on the map<\/button>/)
+  })
+
+  it('takes several actions, after the single one, each its own button that does not sort', () => {
+    const go = () => {}
+    const acts = { action: { label: 'first', onClick: go }, actions: [
+      { label: 'second', onClick: go, title: 'Open the second' }, { label: <i>third</i>, onClick: go, title: 'Third thing', key: 't' }] }
+    for (const sortBy of ['row', 'column'] as const) {
+      const s = html(<DataTable caption="T" columns={cities} sortBy={sortBy} rows={[
+        { id: 'x', label: 'X', better: 'higher', cells: [cell(1)], ...acts }]} />)
+      const tools = s.slice(s.indexOf('kit-data-actions'))
+      expect([...tools.matchAll(/class="kit-data-action"[^>]*>(?:<i>)?(\w+)/g)].map((m) => m[1])).toEqual(['first', 'second', 'third'])
+      expect(s).toContain('title="Open the second"')
+      expect(s).not.toContain('aria-label="Open the second"')     // plain text names itself
+      expect(s).toContain('aria-label="Third thing"')              // markup does not
+      // outside the label button, so a click on them cannot reach its sort
+      const labelBtn = /<button[^>]*labelbtn[^>]*>.*?<\/button>/.exec(s)
+      if (sortBy === 'row') expect(labelBtn![0]).not.toContain('kit-data-action')
+    }
+    const only = html(<DataTable caption="T" columns={cities} rows={[
+      { id: 'y', label: 'Y', cells: [cell(1)], actions: [{ label: 'one', onClick: go }] }]} />)
+    expect(only).toContain('>one</button>')
   })
 
   it('marks the sorted row along its line, and the sorted column in column mode', () => {
