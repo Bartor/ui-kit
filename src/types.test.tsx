@@ -1,7 +1,7 @@
 // What the types promise, checked by `npm run typecheck`: each line under an
 // expect-error must not compile.
 import { describe, expect, it } from 'vitest'
-import { configure, Chips, Fact, PieceTree, RadioCards, SearchBox, Select, Slider, SplitTable, t, TaggedList, Toggle } from './index.js'
+import { configure, Chips, DataTable, Fact, PieceTree, RadioCards, SearchBox, Select, Slider, SplitTable, t, TaggedList, Toggle } from './index.js'
 import type { CardSpec, Hot, SetHot, Strings } from './index.js'
 import { StackedHourBars } from './charts.js'
 import type { CircleLayerProps, CirclePoint, LegendItem } from './map.js'
@@ -45,6 +45,15 @@ export const checks = () => [
   <TaggedList key="12" items={[{ key: 1, color: 'red', label: 'l', value: 1, tag: 't', tone: 'bad' }]} />,
   // @ts-expect-error rows need cells
   <SplitTable key="13" columns={[{ label: 'a' }]} rows={[{ key: 'a', label: 'A' }]} />,
+
+  // a table sorts one way or the other, by what a cell gives apart from what it shows
+  <DataTable key="14" caption="c" sortBy="row" columns={[{ key: 'a', head: 'A' }]}
+    onSortChange={(s) => s?.dir satisfies 'asc' | 'desc' | undefined}
+    rows={[{ id: 'r', label: 'R', better: 'lower', cells: [{ content: <b>1 m</b>, value: 1 }, null] }]} />,
+  // @ts-expect-error no such way to sort
+  <DataTable key="15" caption="c" sortBy="diagonal" columns={[]} rows={[]} />,
+  // @ts-expect-error a direction is asc or desc
+  <DataTable key="16" caption="c" sort={{ key: 'a', dir: 'up' }} columns={[]} rows={[]} />,
 ]
 
 export const layer: CircleLayerProps<CirclePoint & { signal: { runs: number } }> = {

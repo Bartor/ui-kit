@@ -88,6 +88,8 @@ On phones the sidebar and the details become bottom sheets by themselves.
 **Parts of a whole** — `Donut`, `SplitTable`, `ShareBars` (tied together by `usePick`),
 `SplitBody`, `GroupedTable`, `StatBlock`, `DirectionSplit`, `PieceTree`
 
+**Tables** — `DataTable`, with `LABEL_SORT`, `compareValues`, `sortOrder`, `sortItems`, `nextSort`, `firstDir`
+
 **Charts** — `HourBars`, `StackedHourBars`
 
 **Map** — `BaseMap`, `FlyTo`, `PointMarker`, `PieceDots`, `DirArrows`, `HotArrows`, `MapLabels`,
@@ -123,6 +125,50 @@ const [view, setView] = useState<'nodes' | 'roads'>('nodes')
 <CircleLayer points={signals.map((s) => ({ key: s.id, lat: s.lat, lon: s.lon, r: 8, signal: s }))}
   onPick={(p) => open(p.signal)} />
 ```
+
+### Tables
+
+`DataTable` is a table of figures with sticky heads, sorting, grouped rows and a "?" that
+unfolds an explanation under a row or a column head (several can be open at once). Two shapes:
+
+```tsx
+// Rows are things: a click on a head sorts the rows (within each group).
+<DataTable caption="Lines" sortBy="column" labelHead="Line"
+  columns={[{ key: 'km', head: 'km' }, { key: 'note', head: 'Note', align: 'left', first: 'asc' }]}
+  groups={[{ id: 'tram', title: 'Trams', rows: [
+    { id: 'T1', label: 'T1', labelValue: 'T1',
+      cells: [{ content: '14,2', value: 14.2 }, { content: 'Central loop', value: 'Central loop' }] },
+  ] }]} />
+
+// Rows are measures, columns are cities: a control on a row orders the COLUMNS by it.
+<DataTable caption="Cities" sortBy="row" labelHead="Measure"
+  sort={sort} onSortChange={setSort}            // or leave both out, and it keeps its own
+  hot={city} onHot={setCity}                    // the column under the pointer, to link with a map
+  columns={cities.map((c) => ({ key: c.id, head: c.short, title: c.name }))}
+  rows={[{ id: 'wait', label: 'Waiting', unit: 'min', better: 'lower', help: <p>What it is.</p>,
+    cells: cities.map((c) => (c.wait == null ? null : { content: fixed(c.wait), value: c.wait, tone: 'best' })) }]} />
+```
+
+Sorting goes descending, ascending, original order (`sort` is `{ key, dir } | null`); a
+row says which way is better, so its first click puts the best first (`better: 'lower'`
+starts ascending, `'higher'` and `null` descending), and `first` does the same for a column.
+Missing values (`null`, `undefined`, `''`, `NaN`) always go last and are never zero. A cell
+shows `content` and sorts by `value`, so "1 234,5 m" sorts as 1234.5. Sorted heads carry
+`aria-sort`; every control is a button with a name ("Sort by Waiting"), and a status line
+tells screen readers what changed. In column mode `sortWithinGroups={false}` sorts all rows
+together and hides the headings while it does. Cell tones are `best` (bold), `weak` and `dim`;
+a missing cell is a dimmed dash (`empty`). The pure parts, `compareValues` and `sortOrder`,
+are exported for sorting your own lists the same way.
+
+**Sticky heads, and what they need.** The table scrolls in one region, in both directions,
+at a bounded height (`maxHeight`, default `min(34rem, 70dvh)`; `--kit-data-height` sets it
+from CSS). The heads stick to its top, the label column to its left, and the corner cell stays
+over both, also inside `DetailsPanel`, `Modal` and `Sidebar`. `position: sticky` follows the
+nearest ancestor that scrolls, so the usual way to make a wide table scroll, an
+`overflow-x: auto` wrapper around a table that the page scrolls vertically, leaves the heads
+behind. Do not wrap a `DataTable` in an element of your own with `overflow`, and do not remove the
+height (`maxHeight="none"` is for tables that do not need sticky heads). Sticky cells are painted
+with `--kit-data-bg`, which is the panel colour; set it where the table sits on another one.
 
 ### Linked highlighting
 

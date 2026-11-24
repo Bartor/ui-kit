@@ -49,6 +49,11 @@ export const pl: Strings = {
 
   cardProfile: (max) => `profil dobowy · maks. ${max}`,
 
+  sortBy: (name) => `Sortuj według: ${name}`,
+  sortedBy: (name, dir) => `Posortowano według: ${name}, ${dir === 'asc' ? 'rosnąco' : 'malejąco'}`,
+  sortCleared: 'Kolejność pierwotna',
+  sortLabel: 'pierwszej kolumny',
+
   basemaps: {
     darkGray: 'Ciemnoszara z nazwami',
     darkGrayPlain: 'Ciemnoszara, bez nazw',

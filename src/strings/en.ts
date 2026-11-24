@@ -49,6 +49,11 @@ export const en: Strings = {
 
   cardProfile: (max) => `hourly profile · max. ${max}`,
 
+  sortBy: (name) => `Sort by ${name}`,
+  sortedBy: (name, dir) => `Sorted by ${name}, ${dir === 'asc' ? 'ascending' : 'descending'}`,
+  sortCleared: 'Original order',
+  sortLabel: 'the first column',
+
   basemaps: {
     darkGray: 'Dark grey, labelled',
     darkGrayPlain: 'Dark grey, no labels',

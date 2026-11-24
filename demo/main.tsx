@@ -5,7 +5,7 @@ import * as kit from '@bartor-net/ui-kit'
 import { pl } from '@bartor-net/ui-kit/pl'
 import { HourBars, StackedHourBars } from '@bartor-net/ui-kit/charts'
 import * as map from '@bartor-net/ui-kit/map'
-import type { Hot, HourBounds } from '@bartor-net/ui-kit'
+import type { DataTableGroup, DataTableRow, Hot, HourBounds } from '@bartor-net/ui-kit'
 import type { BasemapKey } from '@bartor-net/ui-kit/map'
 import 'leaflet/dist/leaflet.css'
 import '@bartor-net/ui-kit/base.css'
@@ -46,6 +46,66 @@ type Place = (typeof PLACES)[number]
 type Selection = { kind: 'node' } | { kind: 'piece'; id: string } | { kind: 'place'; ref: Place }
 const PERIODS: HourBounds[] = [[0, 24], [7, 9], [22, 6]]
 const TAGS = [['good', '×1.0'], ['fair', '×1.8'], ['weak', '×2.4']] as const
+
+// DataTable: rows that are things, sorted by a column ...
+const LINE_ROWS: [string, string, number, number | null, string][] = [
+  ['tram', 'T1', 14.2, 31, 'Central loop'], ['tram', 'T2', 11.8, 24, 'Harbour'], ['tram', 'T3', 9.5, null, 'Not yet counted'],
+  ['bus', 'B7', 17.9, 52, 'Ring road'], ['bus', 'B12', 8.1, 17, 'Hospital'], ['bus', 'B40', 21.4, 9, 'Airport'],
+]
+const LINE_GROUPS: DataTableGroup[] = [['tram', 'Trams'], ['bus', 'Buses']].map(([id, title]) => ({
+  id: id!, title,
+  rows: LINE_ROWS.filter((r) => r[0] === id).map(([, name, km, load, note]) => ({
+    id: name, label: name, labelValue: name,
+    cells: [
+      { content: kit.fixed(km), value: km },
+      load == null ? null : { content: kit.fmt(load * 100), value: load * 100, tone: load > 40 ? 'best' as const : undefined },
+      { content: note, value: note },
+    ],
+  })),
+}))
+
+// ... and rows that are measures, columns that are cities, sorted by a row
+const TOWNS = ['north', 'south', 'east', 'west', 'old', 'new']
+const MEASURES: [string, string, string, 'higher' | 'lower' | null, (number | null)[]][] = [
+  ['reach', 'Reach in 30 min', '%', 'higher', [31, 18, 24, null, 40, 22]],
+  ['wait', 'Waiting', 'min', 'lower', [4.5, 7.2, 3.1, 5.0, null, 6.4]],
+  ['dens', 'Density', 'p/km²', null, [2900, 1800, 2400, 3100, 4200, 1500]],
+]
+const mark = (vals: (number | null)[], i: number, better: 'higher' | 'lower' | null) => {
+  const have = vals.filter((v): v is number => v != null)
+  if (!better || have.length < 3 || vals[i] == null) return undefined
+  const best = better === 'higher' ? Math.max(...have) : Math.min(...have)
+  const worst = better === 'higher' ? Math.min(...have) : Math.max(...have)
+  return vals[i] === best ? 'best' as const : vals[i] === worst ? 'weak' as const : undefined
+}
+const MEASURE_ROWS: DataTableRow[] = MEASURES.map(([id, label, unit, better, vals]) => ({
+  id, label, unit, better, help: <p>What “{label.toLowerCase()}” counts, and where it comes from.</p>,
+  action: id === 'reach' ? { label: 'on the map', onClick: () => {} } : undefined,
+  cells: vals.map((v, i) => (v == null ? null : { content: kit.fixed(v, v % 1 ? 1 : 0), value: v, tone: mark(vals, i, better) })),
+}))
+
+function Tables() {
+  const [hot, setHot] = useState<string | null>('east')
+  const [sort, setSort] = useState<kit.DataTableSort | null>({ key: 'wait', dir: 'asc' })
+  return (
+    <>
+      <h3>Sorted by a column</h3>
+      <kit.DataTable caption="Lines" sortBy="column" labelHead="Line" groups={LINE_GROUPS}
+        columns={[
+          { key: 'km', head: 'km' },
+          { key: 'load', head: 'Load', title: 'Passengers per hour' },
+          { key: 'note', head: 'Note', align: 'left', first: 'asc' },
+        ]} />
+      <h3>Sorted by a row</h3>
+      <kit.DataTable caption="Towns" sortBy="row" labelHead="Measure" rows={MEASURE_ROWS}
+        sort={sort} onSortChange={setSort} hot={hot} onHot={setHot}
+        columns={TOWNS.map((k) => ({ key: k, head: k[0]!.toUpperCase() + k.slice(1), help: k === 'old' ? <p>The old town.</p> : undefined }))} />
+      <kit.Hint>
+        Rows with a “?” unfold. {sort ? <kit.LinkButton onClick={() => setSort(null)}>Original order</kit.LinkButton> : 'Click ↕ on a row.'}
+      </kit.Hint>
+    </>
+  )
+}
 
 function Broken(): never { throw new Error('a component that throws') }
 
@@ -146,6 +206,9 @@ function App() {
           <h3>Ranking</h3>
           <kit.RankList items={PLACES.map((p) => ({ key: p.id, title: p.name, sub: p.id, value: kit.fmt(p.v),
             on: sel?.kind === 'place' && sel.ref === p, onPick: () => setSel({ kind: 'place', ref: p }) }))} />
+        </kit.Panel>
+        <kit.Panel title="Tables" collapsible>
+          <Tables />
         </kit.Panel>
         <kit.Panel title="Folded" collapsible defaultOpen={false} badge="on">
           <kit.TaggedList items={TAGS.map(([tone, value]) => (

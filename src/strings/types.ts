@@ -50,6 +50,14 @@ export interface Strings {
   /** Caption of the hourly bars on a share card. */
   cardProfile: (max: string) => string
 
+  /** Name of a sort control in a DataTable: "Sort by Name". */
+  sortBy: (name: string) => string
+  /** Said after a sort changed. */
+  sortedBy: (name: string, dir: 'asc' | 'desc') => string
+  sortCleared: string
+  /** The first column, where its head is not text. */
+  sortLabel: string
+
   /** Names of the basemaps, by key. */
   basemaps: Record<string, string>
 }

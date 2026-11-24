@@ -803,3 +803,113 @@
   .kit-map .leaflet-control-zoom a { width: 36px !important; height: 36px !important; line-height: 36px !important; }
   .kit-map .leaflet-control-attribution { font-size: 9px; margin-bottom: 62px !important; }
 }
+
+/* ------------------------------------------------------------- data table
+   One region scrolls in both directions, at a bounded height: the heads stick
+   to its top, the label column to its left, the corner over both. Do not wrap
+   it in an element of your own that scrolls (position: sticky follows the
+   nearest scrolling ancestor), and keep the bound - without a height the
+   region does not scroll up and down and the heads go with the page.
+   Override on the region, or on anything around it:
+     --kit-data-bg      what the sticky cells are painted with, the surface the table sits on
+     --kit-data-height  the height it scrolls at */
+.kit-data-scroll {
+  --kit-data-bg: var(--kit-panel);
+  --kit-data-hot: rgba(122, 162, 227, .14);
+  position: relative; isolation: isolate; overflow: auto;
+  max-height: var(--kit-data-height, min(34rem, 70dvh));
+  overscroll-behavior-x: contain;
+  scroll-padding: 2.4rem 0 0 8rem;       /* focus does not scroll under the sticky cells */
+}
+@supports (color: color-mix(in srgb, red, blue)) {
+  .kit-data-scroll { --kit-data-hot: color-mix(in srgb, var(--kit-focus) 16%, transparent); }
+}
+.kit-data-scroll:focus-visible { outline: 2px solid var(--kit-focus); outline-offset: 2px; }
+.kit-data-table {
+  border-collapse: separate; border-spacing: 0; width: 100%;
+  font-size: .82rem; font-variant-numeric: tabular-nums;
+}
+.kit-data-table th, .kit-data-table td {
+  padding: .32rem .4rem; border-bottom: 1px solid var(--kit-line); vertical-align: top;
+}
+.kit-data-table thead th {
+  position: sticky; top: 0; z-index: 2; background: var(--kit-data-bg);
+  font-weight: 600; font-size: .74rem; color: var(--kit-soft); text-align: right; white-space: nowrap;
+  border-bottom: 1px solid var(--kit-line-strong); vertical-align: bottom;
+}
+.kit-data-table thead th.kit-data-corner {
+  left: 0; z-index: 3; text-align: left; color: var(--kit-dim); font-weight: 500;
+}
+.kit-data-table th.kit-data-col.left, .kit-data-table td.kit-data-col.left { text-align: left; }
+.kit-data-head { display: inline-flex; align-items: center; gap: .25rem; }
+
+/* the label column */
+.kit-data-table th.kit-data-label {
+  position: sticky; left: 0; z-index: 1; background: var(--kit-data-bg); text-align: left; font-weight: 400;
+  min-width: 8.5rem; max-width: 12rem; color: var(--kit-text); border-right: 1px solid var(--kit-line);
+}
+.kit-data-name { display: flex; align-items: flex-start; justify-content: space-between; gap: .35rem; }
+.kit-data-text { min-width: 0; overflow-wrap: anywhere; }
+.kit-data-tools { display: inline-flex; align-items: center; gap: .15rem; flex: 0 0 auto; }
+.kit-data-unit { color: var(--kit-faint); font-size: .72rem; }
+
+/* figures */
+.kit-data-table .kit-data-col { text-align: right; min-width: 3.4rem; }
+.kit-data-table .kit-data-col.narrow { min-width: 0; width: 3.2rem; }
+.kit-data-table td { color: var(--kit-soft); white-space: nowrap; }
+.kit-data-table td.kit-data-best { color: var(--kit-text); font-weight: 700; }
+.kit-data-table td.kit-data-weak, .kit-data-table td.kit-data-dim { color: var(--kit-faint); }
+.kit-data-table .kit-data-col.hot { background-image: linear-gradient(var(--kit-data-hot), var(--kit-data-hot)); }
+.kit-data-table thead th.kit-data-col.hot { color: var(--kit-text); }
+
+/* controls in the heads and rows */
+.kit-data-sort, .kit-data-pick, .kit-data-action {
+  background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer;
+}
+.kit-data-sort { display: inline-flex; align-items: center; gap: .3rem; }
+.kit-data-sort.icon { padding: .15rem .25rem; border-radius: 4px; color: var(--kit-faint); }
+.kit-data-sort:hover { color: var(--kit-text); }
+.kit-data-arrow { font-size: .62rem; line-height: 1; color: var(--kit-faint); }
+.kit-data-sort.on .kit-data-arrow, .kit-data-sort.on.icon { color: var(--kit-link-light); }
+.kit-data-sort:hover .kit-data-arrow { color: var(--kit-text); }
+.kit-data-sort.on:hover .kit-data-arrow { color: var(--kit-link-light); }
+.kit-data-pick {
+  text-decoration: underline; text-decoration-color: var(--kit-line-strong); text-underline-offset: 3px;
+}
+.kit-data-pick:hover { color: var(--kit-text); text-decoration-color: var(--kit-link-light); }
+.kit-data-action {
+  display: inline-block; margin-top: .15rem; color: var(--kit-link); font-size: .72rem;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.kit-data-action:hover { color: var(--kit-link-light); }
+.kit-data-sort:focus-visible, .kit-data-pick:focus-visible, .kit-data-action:focus-visible {
+  outline: 2px solid var(--kit-focus); outline-offset: 2px; border-radius: 2px;
+}
+
+/* group headings and help blocks stay in view while the table scrolls sideways */
+.kit-data-table tr.kit-data-group th {
+  background: none; text-align: left; padding: 1rem .4rem .3rem 0; border-bottom: 1px solid var(--kit-line-strong);
+  font-size: .7rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--kit-dim);
+}
+.kit-data-group th > span { position: sticky; left: 0; display: inline-block; }
+.kit-data-table tr.kit-data-help-row td { padding: .1rem 0 .5rem; white-space: normal; }
+.kit-data-help {
+  position: sticky; left: 0; box-sizing: border-box;
+  width: min(34rem, var(--kit-data-view, calc(100vw - 4.5rem)));
+  background: var(--kit-raised); border: 1px solid var(--kit-line); border-radius: 6px;
+  padding: .55rem .7rem; font-size: .82rem; line-height: 1.5; color: var(--kit-soft); text-align: left;
+}
+.kit-data-help p { margin: 0 0 .4rem; }
+.kit-data-help p:last-child { margin-bottom: 0; }
+.kit-data-help b { color: var(--kit-text); display: block; }
+.kit-data-sr {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kit-data-scroll { scroll-behavior: auto; }
+  .kit-data-table * { transition: none; }
+}
+@media (max-width: 760px) {
+  .kit-data-sort.icon { min-width: 1.7rem; min-height: 1.7rem; justify-content: center; }
+}
