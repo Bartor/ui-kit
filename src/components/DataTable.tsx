@@ -268,7 +268,7 @@ export function DataTable({
             <tr className="kit-data-help-row">
               <td colSpan={span}>
                 <div className="kit-data-help">
-                  {openHeads.map((c) => <div key={c.key}><b>{c.title || c.head}</b>{c.help}</div>)}
+                  {openHeads.map((c) => <div key={c.key}><b className="kit-data-help-title">{c.title || c.head}</b>{c.help}</div>)}
                 </div>
               </td>
             </tr>
