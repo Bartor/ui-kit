@@ -87,21 +87,30 @@ const MEASURE_ROWS: DataTableRow[] = MEASURES.map(([id, label, unit, better, val
 function Tables() {
   const [hot, setHot] = useState<string | null>('east')
   const [sort, setSort] = useState<kit.DataTableSort | null>({ key: 'wait', dir: 'asc' })
+  const [compact, setCompact] = useState(false)
+  const [widths, setWidths] = useState<kit.ColumnWidths>({})
   return (
     <>
       <h3>Sorted by a column</h3>
       <kit.DataTable caption="Lines" sortBy="column" labelHead="Line" groups={LINE_GROUPS}
+        density="compact" resizable="label" labelWidth={{ min: '6rem', max: '10rem' }}
         columns={[
           { key: 'km', head: 'km' },
           { key: 'load', head: 'Load', title: 'Passengers per hour' },
           { key: 'note', head: 'Note', align: 'left', first: 'asc' },
         ]} />
       <h3>Sorted by a row</h3>
+      <kit.Toggle label="Compact rows" checked={compact} onChange={setCompact} />
       <kit.DataTable caption="Towns" sortBy="row" labelHead="Measure" rows={MEASURE_ROWS}
-        sort={sort} onSortChange={setSort} hot={hot} onHot={setHot}
+        sort={sort} onSortChange={setSort} hot={hot} onHot={setHot} summary
+        density={compact ? 'compact' : 'regular'} resizable="all" widths={widths}
+        onWidthsChange={setWidths}
+        toolbar={Object.keys(widths).length > 0
+          ? <kit.LinkButton onClick={() => setWidths({})}>Reset widths</kit.LinkButton> : undefined}
         columns={TOWNS.map((k) => ({ key: k, head: k[0]!.toUpperCase() + k.slice(1), help: k === 'old' ? <p>The old town.</p> : undefined }))} />
       <kit.Hint>
-        Rows with a “?” unfold. {sort ? <kit.LinkButton onClick={() => setSort(null)}>Original order</kit.LinkButton> : 'Click ↕ on a row.'}
+        Click a measure, or its arrows, to order the towns by it; drag the edge of a head to resize it, or focus
+        the edge and use the arrow keys (Enter fits the column).
       </kit.Hint>
     </>
   )

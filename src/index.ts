@@ -12,6 +12,7 @@ export * from './core/files.js'
 export * from './core/pie.js'
 export * from './core/card.js'
 export * from './core/sort.js'
+export * from './core/widths.js'
 
 export * from './components/layout.js'
 export * from './components/text.js'

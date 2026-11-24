@@ -119,3 +119,108 @@ describe('DataTable, columns sort the rows', () => {
     expect(s).toContain('class="kit-data-sort icon"')
   })
 })
+
+describe('DataTable, the row header and where sorting lives', () => {
+  const table = (extra = {}) => html(<DataTable caption="T" columns={cities} rows={measures} sortBy="row" {...extra} />)
+
+  it('makes the label a sort button, with the icon as a second target the keyboard and screen readers skip', () => {
+    const s = table()
+    expect(s).toContain('<button type="button" class="kit-data-labelbtn" aria-label="Sort by Speed">')
+    // the icon button: out of the tab order, hidden from assistive technology, still a button for the pointer
+    expect(s).toMatch(/<button type="button" class="kit-data-sort icon"[^>]*tabindex="-1"[^>]*aria-hidden="true"/)
+    // help and sort share the controls span, which follows the label inside the same cell
+    expect(s).toMatch(/kit-data-name"><button[^>]*labelbtn[\s\S]*?<\/button><span class="kit-data-tools">/)
+    // a row that does not sort has a plain label
+    const dens = s.slice(s.indexOf('Density'))
+    expect(dens.slice(0, 80)).not.toContain('labelbtn')
+  })
+
+  it('puts the action in the controls beside the label, not under it', () => {
+    const s = html(<DataTable caption="T" columns={cities} sortBy="row" rows={[
+      { id: 'x', label: 'X', better: 'higher', action: { label: 'on the map', onClick: () => {} }, cells: [cell(1)] }]} />)
+    expect(s).toMatch(/<span class="kit-data-tools"><button type="button" class="kit-data-action">on the map<\/button>/)
+  })
+
+  it('marks the sorted row along its line, and the sorted column in column mode', () => {
+    const s = table({ defaultSort: { key: 'speed', dir: 'desc' } })
+    expect(s).toContain('<tr class="sorted">')
+    expect((s.match(/class="sorted"/g) || []).length).toBe(1)
+    expect(table()).not.toContain('class="sorted"')
+    const col = html(<DataTable caption="L" columns={props} groups={lines} sortBy="column" defaultSort={{ key: 'n', dir: 'asc' }} />)
+    expect(col).toContain('kit-data-col sorted')
+  })
+
+  it('keeps the head of a column one button with the icon after the text', () => {
+    const s = html(<DataTable caption="L" columns={props} groups={lines} sortBy="column" />)
+    expect(s).toMatch(/<button type="button" class="kit-data-sort fill" aria-label="Sort by Count" title="Sort by Count">Count<svg/)
+  })
+})
+
+describe('DataTable, toolbar, label width, density, resizing', () => {
+  const pivot = (extra = {}) => html(<DataTable caption="T" columns={cities} rows={measures} sortBy="row" {...extra} />)
+
+  it('shows the summary with a way back only while a sort is in effect', () => {
+    const on = pivot({ summary: true, defaultSort: { key: 'wait', dir: 'asc' } })
+    expect(on).toContain('Sorted by Wait, ascending')
+    expect(on).toContain('class="kit-data-reset"')
+    expect(on).toContain('Original order')
+    expect(pivot({ summary: true })).not.toContain('kit-data-bar')
+    expect(pivot({ summary: true, sort: { key: 'nothing', dir: 'asc' } })).not.toContain('kit-data-bar')
+    expect(pivot({ defaultSort: { key: 'wait', dir: 'asc' } })).not.toContain('kit-data-bar')
+  })
+
+  it('takes a toolbar as a node, or as a function of the sort', () => {
+    expect(pivot({ toolbar: <i>extra</i> })).toContain('<div class="kit-data-bar"><i>extra</i></div>')
+    const seen: unknown[] = []
+    pivot({ defaultSort: { key: 'speed', dir: 'desc' }, toolbar: (st: { sort: unknown; name: string | null }) => { seen.push(st.sort, st.name); return 'bar' } })
+    expect(seen).toEqual([{ key: 'speed', dir: 'desc' }, 'Speed'])
+    // the bar is outside the region that scrolls
+    const s = pivot({ toolbar: 'bar' })
+    expect(s.indexOf('kit-data-bar')).toBeLessThan(s.indexOf('kit-data-scroll'))
+  })
+
+  it('sets the label column width: one length is exact, a pair is the range', () => {
+    expect(pivot({ labelWidth: '9rem' })).toContain('--kit-data-label-min:9rem;--kit-data-label-max:9rem')
+    const pair = pivot({ labelWidth: { min: '8rem' } })
+    expect(pair).toContain('--kit-data-label-min:8rem')
+    expect(pair).not.toContain('--kit-data-label-max')
+    expect(pivot()).not.toContain('--kit-data-label')
+  })
+
+  it('has a compact density, and the regular one by default', () => {
+    expect(pivot({ density: 'compact' })).toContain('class="kit-data-table compact"')
+    expect(pivot()).toContain('class="kit-data-table"')
+  })
+
+  it('draws no handles unless asked, then on the label column, or on every head', () => {
+    expect(pivot()).not.toContain('separator')
+    const label = pivot({ resizable: 'label' })
+    expect((label.match(/role="separator"/g) || []).length).toBe(1)
+    const all = pivot({ resizable: 'all' })
+    expect((all.match(/role="separator"/g) || []).length).toBe(5)
+  })
+
+  it('makes a handle a focusable vertical separator with a name and limits', () => {
+    const s = pivot({ resizable: 'all', labelHead: 'Measure' })
+    expect(s).toContain('role="separator" aria-orientation="vertical" tabindex="0" class="kit-data-grip"')
+    expect(s).toContain('aria-label="Resize Measure"')
+    expect(s).toContain('aria-label="Resize City A"')
+    expect(s).toMatch(/aria-valuemin="80" aria-valuemax="480"/)
+    expect(s).toMatch(/aria-valuemin="40" aria-valuemax="320"/)
+    // before anything is measured there is no value to report
+    expect(s).not.toContain('aria-valuenow')
+  })
+
+  it('holds every column at its width once any has one, with a table as wide as their sum', () => {
+    const s = pivot({ resizable: 'all', widths: { ':label': 150, a: 60, b: 70 } })
+    expect(s).toContain('kit-data-fixed')
+    expect(s).toContain('style="width:408px"')    // 150 + 60 + 70 + 2 columns (64 each) at the fallback of 64
+    expect(s).toContain('<colgroup><col style="width:150px"/><col style="width:60px"/><col style="width:70px"/>')
+    expect(s).toContain('aria-valuenow="150"')
+    expect(s).toContain('aria-valuenow="60"')
+    // columns are laid out in the sorted order, and so are their widths
+    const sorted = pivot({ resizable: 'all', widths: { ':label': 150, a: 60, b: 70 }, defaultSort: { key: 'speed', dir: 'desc' } })
+    expect(sorted).toContain('<col style="width:150px"/><col style="width:70px"/>')
+    expect(pivot({ resizable: 'all', widths: {} })).not.toContain('kit-data-fixed')
+  })
+})

@@ -846,11 +846,22 @@
 /* the label column */
 .kit-data-table th.kit-data-label {
   position: sticky; left: 0; z-index: 1; background: var(--kit-data-bg); text-align: left; font-weight: 400;
-  min-width: 8.5rem; max-width: 12rem; color: var(--kit-text); border-right: 1px solid var(--kit-line);
+  min-width: var(--kit-data-label-min, 12rem); max-width: var(--kit-data-label-max, 20rem);
+  color: var(--kit-text); border-right: 1px solid var(--kit-line);
 }
-.kit-data-name { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .1rem .35rem; }
-.kit-data-text { min-width: 0; overflow-wrap: anywhere; }
-.kit-data-tools { display: inline-flex; align-items: center; gap: .15rem; flex: 0 0 auto; margin-left: auto; }
+/* label and controls share the first line: the label takes what is left and wraps on word boundaries (two lines,
+   then it is cut and the whole text is a tooltip); the controls stay at the right edge of the cell */
+.kit-data-name { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: .1rem .4rem; }
+.kit-data-text {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  min-width: 0; overflow: hidden; overflow-wrap: break-word;
+}
+.kit-data-tools { display: inline-flex; align-items: center; gap: .3rem; white-space: nowrap; justify-self: end; }
+.kit-data-labelbtn {
+  display: block; width: 100%; min-width: 0; margin: 0; padding: 0; border: 0; background: none;
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+.kit-data-labelbtn:hover .kit-data-text { text-decoration: underline; text-decoration-color: var(--kit-line-strong); text-underline-offset: 3px; }
 .kit-data-unit { color: var(--kit-faint); font-size: .72rem; }
 
 /* figures */
@@ -866,23 +877,34 @@
 .kit-data-sort, .kit-data-pick, .kit-data-action {
   background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer;
 }
-.kit-data-sort { display: inline-flex; align-items: center; gap: .3rem; }
-.kit-data-sort.icon { padding: .15rem .25rem; border-radius: 4px; color: var(--kit-faint); }
+.kit-data-sort { display: inline-flex; align-items: center; gap: .35rem; }
 .kit-data-sort:hover { color: var(--kit-text); }
-.kit-data-arrow { font-size: .62rem; line-height: 1; color: var(--kit-faint); }
-.kit-data-sort.on .kit-data-arrow, .kit-data-sort.on.icon { color: var(--kit-link-light); }
-.kit-data-sort:hover .kit-data-arrow { color: var(--kit-text); }
-.kit-data-sort.on:hover .kit-data-arrow { color: var(--kit-link-light); }
+/* the icon alone, as a button of its own: boxed, so it is easy to find */
+.kit-data-sort.icon {
+  justify-content: center; width: 1.5rem; height: 1.5rem; flex: 0 0 auto;
+  border: 1px solid var(--kit-line-strong); border-radius: 5px; background: var(--kit-control);
+}
+.kit-data-sort.icon:hover { border-color: var(--kit-line-hover); }
+.kit-data-sort.icon.on { border-color: var(--kit-accent); background: var(--kit-accent-fill); }
+/* a head that sorts is sorted by a click anywhere on it */
+.kit-data-sort.fill::after { content: ''; position: absolute; inset: 0; }
+.kit-data-head .kit-help-btn, .kit-data-head .kit-data-pick, .kit-data-head .kit-data-sort.icon { position: relative; z-index: 1; }
+.kit-data-icon { width: .55rem; height: .85rem; flex: 0 0 auto; }
+.kit-data-icon path { fill: var(--kit-faint); }
+.kit-data-sort:hover .kit-data-icon path { fill: var(--kit-soft); }
+.kit-data-sort .kit-data-icon.asc .up, .kit-data-sort .kit-data-icon.desc .down { fill: var(--kit-link-light); }
+.kit-data-sort.icon.on .kit-data-icon.asc .up, .kit-data-sort.icon.on .kit-data-icon.desc .down { fill: #fff; }
 .kit-data-pick {
   text-decoration: underline; text-decoration-color: var(--kit-line-strong); text-underline-offset: 3px;
 }
 .kit-data-pick:hover { color: var(--kit-text); text-decoration-color: var(--kit-link-light); }
 .kit-data-action {
-  display: inline-block; margin-top: .15rem; color: var(--kit-link); font-size: .72rem;
+  display: inline-block; color: var(--kit-link); font-size: .72rem;
   text-decoration: underline; text-underline-offset: 2px;
 }
 .kit-data-action:hover { color: var(--kit-link-light); }
-.kit-data-sort:focus-visible, .kit-data-pick:focus-visible, .kit-data-action:focus-visible {
+.kit-data-sort:focus-visible, .kit-data-pick:focus-visible, .kit-data-action:focus-visible,
+.kit-data-labelbtn:focus-visible, .kit-data-reset:focus-visible {
   outline: 2px solid var(--kit-focus); outline-offset: 2px; border-radius: 2px;
 }
 
@@ -906,10 +928,70 @@
   position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* what is sorted by is marked along its whole line, not only for screen readers */
+.kit-data-scroll { --kit-data-sorted: rgba(122, 162, 227, .1); }
+@supports (color: color-mix(in srgb, red, blue)) {
+  .kit-data-scroll { --kit-data-sorted: color-mix(in srgb, var(--kit-focus) 11%, transparent); }
+}
+.kit-data-table tr.sorted > * { background-image: linear-gradient(var(--kit-data-sorted), var(--kit-data-sorted)); }
+.kit-data-table tr.sorted > th.kit-data-label { box-shadow: inset 3px 0 0 var(--kit-link-light); }
+.kit-data-table .kit-data-col.sorted { background-image: linear-gradient(var(--kit-data-sorted), var(--kit-data-sorted)); }
+.kit-data-table .kit-data-col.hot.sorted {
+  background-image: linear-gradient(var(--kit-data-hot), var(--kit-data-hot)),
+    linear-gradient(var(--kit-data-sorted), var(--kit-data-sorted));
+}
+.kit-data-table thead th.kit-data-col.sorted, .kit-data-table thead th.kit-data-corner[aria-sort] {
+  box-shadow: inset 0 -2px 0 var(--kit-link-light); color: var(--kit-text);
+}
+
+/* a bar above the table, outside what scrolls */
+.kit-data-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .9rem; margin-bottom: .4rem;
+  font-size: .8rem; color: var(--kit-dim);
+}
+.kit-data-bar:empty { display: none; }
+.kit-data-summary { display: inline-flex; align-items: center; gap: .6rem; color: var(--kit-soft); }
+.kit-data-reset {
+  padding: 0; border: 0; background: none; font: inherit; font-size: .78rem; cursor: pointer;
+  color: var(--kit-link); text-decoration: underline; text-underline-offset: 2px;
+}
+.kit-data-reset:hover { color: var(--kit-link-light); }
+
+/* resizing: a handle on the right edge of a head */
+.kit-data-grip { position: absolute; top: 0; right: 0; bottom: 0; width: 8px; z-index: 2; cursor: col-resize; touch-action: none; }
+.kit-data-grip::after {
+  content: ''; position: absolute; top: .3rem; bottom: .3rem; right: 2px; width: 2px; border-radius: 1px;
+  background: var(--kit-line-strong);
+}
+.kit-data-grip:hover::after, .kit-data-grip:focus-visible::after { background: var(--kit-link-light); }
+.kit-data-grip:focus-visible { outline: 2px solid var(--kit-focus); outline-offset: -2px; }
+/* Once a column has a width every one has: the layout is fixed and the table as wide as their sum, which is the
+   width of the sticky label column too. Measuring puts the table back to what it would be on its own. */
+.kit-data-table.kit-data-fixed { table-layout: fixed; }
+.kit-data-fixed th, .kit-data-fixed td { overflow: hidden; text-overflow: ellipsis; }
+.kit-data-fixed th.kit-data-label, .kit-data-fixed .kit-data-col { min-width: 0; max-width: none; }
+.kit-data-fixed .kit-data-col.narrow { width: auto; }
+.kit-data-table.kit-data-measuring { table-layout: auto !important; width: max-content !important; }
+.kit-data-measuring col { width: auto !important; }
+.kit-data-measuring th, .kit-data-measuring td { overflow: visible !important; }
+.kit-data-measuring th.kit-data-label { min-width: 0 !important; max-width: none !important; }
+.kit-data-measuring .kit-data-text { display: block !important; white-space: nowrap !important; overflow: visible !important; }
+.kit-data-measuring .kit-data-name { grid-template-columns: max-content max-content !important; }
+.kit-data-measuring tr.kit-data-group, .kit-data-measuring tr.kit-data-help-row { display: none !important; }
+
+/* density */
+.kit-data-table.compact { font-size: .78rem; }
+.kit-data-table.compact th, .kit-data-table.compact td { padding: .15rem .32rem; }
+.kit-data-table.compact thead th { font-size: .7rem; }
+.kit-data-table.compact tr.kit-data-group th { padding-top: .6rem; }
+.kit-data-table.compact .kit-data-sort.icon { width: 1.25rem; height: 1.25rem; }
+.kit-data-table.compact .kit-help-btn { width: 17px; height: 17px; font-size: .66rem; }
 @media (prefers-reduced-motion: reduce) {
   .kit-data-scroll { scroll-behavior: auto; }
   .kit-data-table * { transition: none; }
 }
 @media (max-width: 760px) {
-  .kit-data-sort.icon { min-width: 1.7rem; min-height: 1.7rem; justify-content: center; }
+  .kit-data-sort.icon, .kit-data-table.compact .kit-data-sort.icon { min-width: 1.7rem; min-height: 1.7rem; }
+  .kit-data-grip { width: 16px; }
 }

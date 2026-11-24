@@ -52,6 +52,8 @@ export const en: Strings = {
   sortBy: (name) => `Sort by ${name}`,
   sortedBy: (name, dir) => `Sorted by ${name}, ${dir === 'asc' ? 'ascending' : 'descending'}`,
   sortCleared: 'Original order',
+  sortReset: 'Original order',
+  resizeColumn: (name) => `Resize ${name}`,
   sortLabel: 'the first column',
 
   basemaps: {

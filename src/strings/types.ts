@@ -56,6 +56,10 @@ export interface Strings {
   sortedBy: (name: string, dir: 'asc' | 'desc') => string
   sortCleared: string
   /** The first column, where its head is not text. */
+  /** The button that restores the original order, beside "Sorted by X". */
+  sortReset: string
+  /** Name of the handle that resizes a column. */
+  resizeColumn: (name: string) => string
   sortLabel: string
 
   /** Names of the basemaps, by key. */

@@ -88,7 +88,7 @@ On phones the sidebar and the details become bottom sheets by themselves.
 **Parts of a whole** — `Donut`, `SplitTable`, `ShareBars` (tied together by `usePick`),
 `SplitBody`, `GroupedTable`, `StatBlock`, `DirectionSplit`, `PieceTree`
 
-**Tables** — `DataTable`, with `LABEL_SORT`, `compareValues`, `sortOrder`, `sortItems`, `nextSort`, `firstDir`
+**Tables** — `DataTable`, with `LABEL_SORT`, `LABEL_WIDTH_KEY`, `compareValues`, `sortOrder`, `sortItems`, `nextSort`, `firstDir`
 
 **Charts** — `HourBars`, `StackedHourBars`
 
@@ -159,6 +159,28 @@ tells screen readers what changed. In column mode `sortWithinGroups={false}` sor
 together and hides the headings while it does. Cell tones are `best` (bold), `weak` and `dim`;
 a missing cell is a dimmed dash (`empty`). The pure parts, `compareValues` and `sortOrder`,
 are exported for sorting your own lists the same way.
+
+**The row header and where sorting lives.** In a table that sorts by row, each row header is one line: the label
+(with its unit in small print), then at the right edge the action, the "?" and the sort icon. When the label column
+is narrow the label wraps on word boundaries, to two lines and then cut with the whole text as a tooltip, and the
+controls stay on the first line. The label itself is the sort button (click, Enter or Space) and the icon beside it is
+a second target for the pointer; the "?" and the action are separate buttons. The sorted row is tinted along its whole
+width and marked at its left edge. By column, the whole head is the button, with the icon right after the text, and the
+sorted column is tinted.
+
+`labelWidth` sets the label column: one length (`"9rem"`, exactly that) or `{ min, max }`. Without it the column is
+as wide as the longest label, between 12rem and 20rem. `density="compact"` tightens the rows and cells.
+`summary` shows "Sorted by X, descending" with a button back to the original order above the table, and `toolbar`
+(a node, or a function of `{ sort, name, reset }`) puts anything else there. Both sit outside the region that scrolls.
+
+`resizable` is `false`, `'label'` or `'all'`. Each head then has a separator on its right edge that can be dragged
+(mouse or touch), focused and moved with the arrow keys (Shift for bigger steps, Home and End for the limits), and
+fitted to its content with a double click or Enter. Widths are pixels by column key (`LABEL_WIDTH_KEY` for the label
+column), kept by the table or by you (`widths`, `onWidthsChange`). Once any column has a width every column is held
+at one, and the table is as wide as their sum, so it stops adapting to its container until you pass `{}`. The label
+column stays sticky and takes its width like the others; the heads stay sticky. The limits are 80 to 480 for the
+label column and 40 to 320 for the others; the pure functions behind it (`clampWidth`, `fillWidths`, `widthAfterKey`,
+`tableWidth`) are exported.
 
 **Sticky heads, and what they need.** The table scrolls in one region, in both directions,
 at a bounded height (`maxHeight`, default `min(34rem, 70dvh)`; `--kit-data-height` sets it
