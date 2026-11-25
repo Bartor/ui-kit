@@ -925,8 +925,9 @@
 .kit-data-help p { margin: 0 0 .4rem; }
 .kit-data-help p:last-child { margin-bottom: 0; }
 .kit-data-help-title { display: block; color: var(--kit-text); font-weight: 600; }
+/* at the top of the region: left where it falls (after the table) it adds a pixel of scroll to a table that is all in view */
 .kit-data-sr {
-  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
+  position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
   white-space: nowrap;
 }
 
@@ -958,7 +959,8 @@
   color: var(--kit-link); text-decoration: underline; text-underline-offset: 2px;
 }
 .kit-data-reset:hover { color: var(--kit-link-light); }
-.kit-data-widths-reset { display: inline-flex; align-items: center; min-height: 1.5rem; }
+/* after the toolbar, so that what the caller put there does not move when the link appears */
+.kit-data-widths-reset { display: inline-flex; align-items: center; min-height: 1.5rem; order: 2; }
 
 /* resizing: a handle on the right edge of a head */
 .kit-data-grip { position: absolute; top: 0; right: 0; bottom: 0; width: 8px; z-index: 2; cursor: col-resize; touch-action: none; }
