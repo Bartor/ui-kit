@@ -94,7 +94,7 @@ function Tables() {
     <>
       <h3>Sorted by a column</h3>
       <kit.DataTable caption="Lines" sortBy="column" labelHead="Line" groups={LINE_GROUPS}
-        density="compact" resizable="label" labelWidth={{ min: '6rem', max: '10rem' }}
+        density="compact" resizable="label" widthsKey="demo-lines" labelWidth={{ min: '6rem', max: '10rem' }}
         columns={[
           { key: 'km', head: 'km' },
           { key: 'load', head: 'Load', title: 'Passengers per hour' },

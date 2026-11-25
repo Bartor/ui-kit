@@ -54,6 +54,7 @@ export const pl: Strings = {
   sortCleared: 'Kolejność pierwotna',
   sortReset: 'Kolejność pierwotna',
   resizeColumn: (name) => `Zmień szerokość: ${name}`,
+  widthsReset: 'Domyślne szerokości',
   sortLabel: 'pierwszej kolumny',
 
   basemaps: {

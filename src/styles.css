@@ -958,6 +958,7 @@
   color: var(--kit-link); text-decoration: underline; text-underline-offset: 2px;
 }
 .kit-data-reset:hover { color: var(--kit-link-light); }
+.kit-data-widths-reset { display: inline-flex; align-items: center; min-height: 1.5rem; }
 
 /* resizing: a handle on the right edge of a head */
 .kit-data-grip { position: absolute; top: 0; right: 0; bottom: 0; width: 8px; z-index: 2; cursor: col-resize; touch-action: none; }
@@ -971,7 +972,10 @@
    width of the sticky label column too. Measuring puts the table back to what it would be on its own. */
 .kit-data-table.kit-data-fixed { table-layout: fixed; }
 .kit-data-fixed th, .kit-data-fixed td { overflow: hidden; text-overflow: ellipsis; }
-.kit-data-fixed th.kit-data-label, .kit-data-fixed .kit-data-col { min-width: 0; max-width: none; }
+/* the widths the reader set win over any range a page gives the columns in its own stylesheet */
+.kit-data-table.kit-data-fixed th.kit-data-label, .kit-data-table.kit-data-fixed .kit-data-col {
+  min-width: 0 !important; max-width: none !important;
+}
 .kit-data-fixed .kit-data-col.narrow { width: auto; }
 .kit-data-table.kit-data-measuring { table-layout: auto !important; width: max-content !important; }
 .kit-data-measuring col { width: auto !important; }

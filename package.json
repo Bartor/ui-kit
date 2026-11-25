@@ -1,6 +1,6 @@
 {
   "name": "@bartor-net/ui-kit",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "React components for maps of city data: sidebar and controls, detail panels, hourly charts, modal-split pies, Leaflet layers",
   "type": "module",
   "repository": {

@@ -60,6 +60,8 @@ export interface Strings {
   sortReset: string
   /** Name of the handle that resizes a column. */
   resizeColumn: (name: string) => string
+  /** The button that clears the widths the reader gave the columns. */
+  widthsReset: string
   sortLabel: string
 
   /** Names of the basemaps, by key. */

@@ -33,11 +33,25 @@ export function withWidth(widths: ColumnWidths, key: string, width: number): Col
   return { ...widths, [key]: clampWidth(key, width) }
 }
 
-/** The widths with the ones missing filled from `natural`, and every one held between its limits. */
-export function fillWidths(widths: ColumnWidths, natural: ColumnWidths): ColumnWidths {
+/** A width held between the limits of its column, where a column that starts outside them may stay where it is:
+ *  a column laid out wider than the largest width does not jump back the moment it is touched. */
+export function clampFrom(key: string, width: number, from: number): number {
+  const { min, max } = widthLimits(key)
+  if (!Number.isFinite(width)) return clampWidth(key, from)
+  const lo = Number.isFinite(from) ? Math.min(min, Math.round(from)) : min
+  const hi = Number.isFinite(from) ? Math.max(max, Math.round(from)) : max
+  return Math.min(hi, Math.max(lo, Math.round(width)))
+}
+
+/** The widths with the ones missing filled from `seen`, the widths the columns have on screen: those are taken as
+ *  they are (whole pixels, rounded up: half a pixel less would cut the text of a head that fits exactly), so that
+ *  giving one column a width moves no other. The ones set stay as set. */
+export function fillWidths(widths: ColumnWidths, seen: ColumnWidths): ColumnWidths {
   const out: Record<string, number> = {}
-  for (const key of new Set([...Object.keys(natural), ...Object.keys(widths)])) {
-    out[key] = clampWidth(key, widths[key] ?? natural[key] ?? WIDTH_FALLBACK[kind(key)])
+  for (const key of new Set([...Object.keys(seen), ...Object.keys(widths)])) {
+    const own = widths[key]
+    const now = seen[key]
+    out[key] = own != null ? own : now != null && now > 0 ? Math.ceil(now - 0.01) : WIDTH_FALLBACK[kind(key)]
   }
   return out
 }
@@ -47,8 +61,8 @@ export function widthAfterKey(key: string, current: number, pressed: string, shi
   const step = shift ? WIDTH_BIG_STEP : WIDTH_STEP
   const { min, max } = widthLimits(key)
   switch (pressed) {
-    case 'ArrowRight': case 'ArrowUp': return clampWidth(key, current + step)
-    case 'ArrowLeft': case 'ArrowDown': return clampWidth(key, current - step)
+    case 'ArrowRight': case 'ArrowUp': return clampFrom(key, current + step, current)
+    case 'ArrowLeft': case 'ArrowDown': return clampFrom(key, current - step, current)
     case 'Home': return min
     case 'End': return max
     default: return null
@@ -58,4 +72,38 @@ export function widthAfterKey(key: string, current: number, pressed: string, shi
 /** The width of the whole table: the columns in order, each at its width or the fallback. */
 export function tableWidth(keys: readonly string[], widths: ColumnWidths): number {
   return keys.reduce((sum, key) => sum + (widths[key] ?? WIDTH_FALLBACK[kind(key)]), 0)
+}
+
+/** Where widths are kept between visits: the browser's local storage, under this prefix and the table's own key. */
+export const WIDTHS_STORE = 'kit-data-widths:'
+
+type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
+
+const browserStore = (): Store | undefined => {
+  try {
+    return typeof localStorage === 'undefined' ? undefined : localStorage
+  } catch {
+    return undefined        // storage is blocked
+  }
+}
+
+/** The widths kept under `key`, or none: anything that is not a positive number is dropped. Never throws. */
+export function readWidths(key: string, store: Store | undefined = browserStore()): ColumnWidths {
+  const out: Record<string, number> = {}
+  try {
+    const kept: unknown = JSON.parse(store?.getItem(WIDTHS_STORE + key) ?? 'null')
+    if (!kept || typeof kept !== 'object' || Array.isArray(kept)) return out
+    for (const [k, v] of Object.entries(kept)) {
+      if (typeof v === 'number' && Number.isFinite(v) && v > 0) out[k] = Math.round(v)
+    }
+  } catch { /* unreadable: start without widths */ }
+  return out
+}
+
+/** Keeps the widths under `key`; no widths removes the entry. Never throws (a full or blocked storage is ignored). */
+export function writeWidths(key: string, widths: ColumnWidths, store: Store | undefined = browserStore()): void {
+  try {
+    if (Object.keys(widths).length) store?.setItem(WIDTHS_STORE + key, JSON.stringify(widths))
+    else store?.removeItem(WIDTHS_STORE + key)
+  } catch { /* nothing to do */ }
 }

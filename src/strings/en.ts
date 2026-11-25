@@ -54,6 +54,7 @@ export const en: Strings = {
   sortCleared: 'Original order',
   sortReset: 'Original order',
   resizeColumn: (name) => `Resize ${name}`,
+  widthsReset: 'Default widths',
   sortLabel: 'the first column',
 
   basemaps: {

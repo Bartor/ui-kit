@@ -244,4 +244,15 @@ describe('DataTable, toolbar, label width, density, resizing', () => {
     expect(sorted).toContain('<col style="width:150px"/><col style="width:70px"/>')
     expect(pivot({ resizable: 'all', widths: {} })).not.toContain('kit-data-fixed')
   })
+
+  it('offers the way back to automatic widths only while widths are set on a resizable table', () => {
+    const s = pivot({ resizable: 'all', widths: { ':label': 150 } })
+    expect(s).toContain('<button type="button" class="kit-data-reset kit-data-widths-reset">Default widths</button>')
+    expect(s.indexOf('kit-data-widths-reset')).toBeLessThan(s.indexOf('kit-data-scroll'))
+    expect(pivot({ resizable: 'all' })).not.toContain('kit-data-widths-reset')
+    expect(pivot({ resizable: 'all', widths: {} })).not.toContain('kit-data-widths-reset')
+    expect(pivot({ widths: { ':label': 150 } })).not.toContain('kit-data-widths-reset')
+    // a key for keeping the widths changes nothing until the browser has some
+    expect(pivot({ resizable: 'all', widthsKey: 'cities' })).not.toContain('kit-data-fixed')
+  })
 })

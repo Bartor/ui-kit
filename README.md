@@ -182,10 +182,21 @@ as wide as the longest label, between 12rem and 20rem. `density="compact"` tight
 (mouse or touch), focused and moved with the arrow keys (Shift for bigger steps, Home and End for the limits), and
 fitted to its content with a double click or Enter. Widths are pixels by column key (`LABEL_WIDTH_KEY` for the label
 column), kept by the table or by you (`widths`, `onWidthsChange`). Once any column has a width every column is held
-at one, and the table is as wide as their sum, so it stops adapting to its container until you pass `{}`. The label
-column stays sticky and takes its width like the others; the heads stay sticky. The limits are 80 to 480 for the
-label column and 40 to 320 for the others; the pure functions behind it (`clampWidth`, `fillWidths`, `widthAfterKey`,
-`tableWidth`) are exported.
+at one, and the table is as wide as their sum, so it stops adapting to its container until the widths are cleared:
+by the reader with the "Default widths" button that shows above the table while widths are set, or by you passing
+`{}`. Dragging one column leaves the others exactly as wide as they are on screen. The label column stays sticky and
+takes its width like the others; the heads stay sticky. The limits are 80 to 480 for the label column and 40 to 320
+for the others (a column laid out outside them stays where it is until it is dragged back inside); the pure functions
+behind it (`clampWidth`, `clampFrom`, `fillWidths`, `widthAfterKey`, `tableWidth`) are exported.
+
+`widthsKey="lines"` keeps the reader's widths in the browser's local storage (under `kit-data-widths:lines`) so they
+come back on the next visit; it applies to a resizable table that keeps its own widths. Give tables with different
+columns different keys, and put the project's name in the key where several projects share one host (local storage
+is per host, not per path). A column that appears later gets its natural width. `readWidths` and `writeWidths` are
+exported for a caller that keeps the widths itself.
+
+With `sortBy="row"` the columns change places when the reader sorts; they slide to their new places (not when the
+system asks for reduced motion), so the change of order is seen.
 
 **Sticky heads, and what they need.** The table scrolls in one region, in both directions,
 at a bounded height (`maxHeight`, default `min(34rem, 70dvh)`; `--kit-data-height` sets it

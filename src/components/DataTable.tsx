@@ -1,13 +1,24 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from 'react'
 import { t } from '../core/config.js'
 import { firstDir, nextSort, sortItems, sortOrder } from '../core/sort.js'
 import type { Better, SortDir, SortState, SortValue } from '../core/sort.js'
-import { clampWidth, fillWidths, LABEL_WIDTH_KEY, tableWidth, widthAfterKey, widthLimits } from '../core/widths.js'
+import {
+  clampFrom, clampWidth, fillWidths, LABEL_WIDTH_KEY, readWidths, tableWidth, widthAfterKey, widthLimits, writeWidths,
+} from '../core/widths.js'
 import type { ColumnWidths } from '../core/widths.js'
 import { HelpButton } from './controls.js'
 
 const cx = (...c: (string | false | null | undefined)[]): string => c.filter(Boolean).join(' ')
+
+/** Before paint in the browser; on a server, where there is no layout, an ordinary effect (which never runs there). */
+const useLayout = typeof window === 'undefined' ? useEffect : useLayoutEffect
+
+const stillMotion = (): boolean =>
+  typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+
+/** How long the columns take to reach their new places after a sort moved them, in ms. */
+const MOVE_MS = 320
 
 /** The key of the label column's sort, in column mode. */
 export const LABEL_SORT = ':label'
@@ -131,8 +142,14 @@ export interface DataTableProps {
   labelWidth?: string | { min?: string; max?: string }
   /** Columns the reader can drag wider or narrower: `'label'` the label column, `'all'` every column, `false` none.
    *  Each head gets a separator to drag, to move with the arrow keys (Home and End go to the limits) and to
-   *  auto-fit (double click or Enter). Sticky heads and label column keep working. */
+   *  auto-fit (double click or Enter). Dragging one column leaves the others as wide as they are on screen. Sticky
+   *  heads and label column keep working. While widths are set, a "default widths" button above the table clears
+   *  them. */
   resizable?: false | 'label' | 'all'
+  /** A name for this table under which the widths the reader set are kept in the browser's local storage, and come
+   *  back on the next visit (per browser, per site). Give tables with different columns different keys. Only for a
+   *  resizable table that keeps its own widths (no `widths`); without it the widths last until the table unmounts. */
+  widthsKey?: string
   /** The widths in pixels by column key (LABEL_WIDTH_KEY for the label column), when the caller keeps them. Leave it out
    *  for a table that keeps its own. Once any column has a width, every column is held at one: the table stops
    *  adapting to its container until the widths are cleared (`{}`). */
@@ -238,17 +255,20 @@ const rowName = (r: DataTableRow): string => r.name ?? (typeof r.label === 'stri
  */
 export function DataTable({
   columns, groups, rows, caption, labelHead, sortBy, sort, defaultSort, onSortChange, sortWithinGroups = true,
-  hot = null, onHot, empty = '–', maxHeight, className, labelWidth, resizable = false, widths, onWidthsChange,
+  hot = null, onHot, empty = '–', maxHeight, className, labelWidth, resizable = false, widthsKey, widths, onWidthsChange,
   density = 'regular', toolbar, summary = false,
 }: DataTableProps) {
   const [openRows, setOpenRows] = useState<ReadonlySet<string>>(() => new Set())
   const [openCols, setOpenCols] = useState<ReadonlySet<string>>(() => new Set())
   const [inner, setInner] = useState<DataTableSort | null>(defaultSort ?? null)
   const [innerWidths, setInnerWidths] = useState<ColumnWidths>({})
+  const [seenWidths, setSeenWidths] = useState<ColumnWidths>({})
   const [note, setNote] = useState('')
   const region = useRef<HTMLDivElement>(null)
   const table = useRef<HTMLTableElement>(null)
   const drag = useRef<{ key: string; x: number; width: number; base: ColumnWidths } | null>(null)
+  const lastWidths = useRef<ColumnWidths>({})
+  const lastKeys = useRef<readonly string[] | null>(null)
 
   // The width the help blocks stay within while the table scrolls sideways.
   useEffect(() => {
@@ -302,28 +322,78 @@ export function DataTable({
 
   // Widths: none until a column is dragged, then every column has one and the table is as wide as their sum.
   const widthsKept = widths === undefined
-  const sizes: ColumnWidths = widthsKept ? innerWidths : widths
+  const stored = widthsKept && resizable ? widthsKey : undefined
+  const sizes: ColumnWidths = widthsKept ? (resizable ? innerWidths : {}) : widths
   const fixed = Object.keys(sizes).length > 0
   const keys = [LABEL_WIDTH_KEY, ...order.map((i) => columns[i]!.key)]
+  const keyList = keys.join('\u0001')
   const setSizes = (next: ColumnWidths) => {
+    lastWidths.current = next
     if (widthsKept) setInnerWidths(next)
+    if (stored != null && !drag.current) writeWidths(stored, next)     // a drag keeps them once, when it ends
     onWidthsChange?.(next)
   }
-  // The natural width of every head, as the table lays itself out without any widths.
-  const measure = (): ColumnWidths => {
+  // The width of every head: as it is on screen, or as the table would lay itself out without any widths.
+  const measure = (natural: boolean): ColumnWidths => {
     const el = table.current
     const cells = el?.tHead?.rows[0]?.cells
     if (!el || !cells) return {}
-    el.classList.add('kit-data-measuring')
+    if (natural) el.classList.add('kit-data-measuring')
     const out: Record<string, number> = {}
     keys.forEach((k, i) => { const c = cells[i]; if (c) out[k] = c.getBoundingClientRect().width })
-    el.classList.remove('kit-data-measuring')
+    if (natural) el.classList.remove('kit-data-measuring')
     return out
   }
-  const complete = () => fillWidths(sizes, measure())
-  const fit = (key: string) => setSizes({ ...complete(), [key]: clampWidth(key, measure()[key] ?? 0) })
+  // Every column at the width it has now: giving one column a width must not move the others.
+  const complete = () => fillWidths(sizes, measure(false))
+  const fit = (key: string) => setSizes({ ...complete(), [key]: clampWidth(key, measure(true)[key] ?? 0) })
+
+  // The widths kept from an earlier visit, before the first paint.
+  useLayout(() => {
+    if (stored == null) return
+    const kept = readWidths(stored)
+    lastWidths.current = kept
+    setInnerWidths((was) => (Object.keys(kept).length || Object.keys(was).length ? kept : was))
+  }, [stored])
+
+  // A column that has no width while the others do (it is new since the widths were kept): its natural one.
+  useLayout(() => {
+    if (!widthsKept || !fixed || keys.every((k) => sizes[k] != null)) return
+    setSizes(fillWidths(sizes, measure(true)))
+  }, [keyList, fixed])
+
+  // When a sort (or the caller) puts the columns in another order, they slide to their new places: an order that
+  // changes under the reader is easy to miss in a wide table.
+  useLayout(() => {
+    const was = lastKeys.current
+    lastKeys.current = keys
+    const el = table.current
+    const cells = el?.tHead?.rows[0]?.cells
+    if (!was || !el || !cells || stillMotion()) return
+    const width = new Map(keys.map((k, i) => [k, cells[i]?.getBoundingClientRect().width ?? 0]))
+    const lefts = (list: readonly string[]) => {
+      const out = new Map<string, number>()
+      let x = 0
+      for (const k of list) { out.set(k, x); x += width.get(k) ?? 0 }
+      return out
+    }
+    const before = lefts(was.filter((k) => width.has(k)))
+    const after = lefts(keys)
+    keys.forEach((k, i) => {
+      const dx = (before.get(k) ?? NaN) - after.get(k)!
+      if (i === 0 || !Number.isFinite(dx) || Math.abs(dx) < 1) return
+      for (const row of Array.from(el.rows)) {
+        const cell = row.cells.length === keys.length ? row.cells[i] : undefined
+        if (cell && typeof cell.animate === 'function') {
+          cell.animate([{ transform: `translateX(${dx}px)` }, { transform: 'translateX(0)' }],
+            { duration: MOVE_MS, easing: 'cubic-bezier(.2, .7, .2, 1)' })
+        }
+      }
+    })
+  }, [keyList])
+
   const grip = (key: string, name: string) => ({
-    name, id: key, width: sizes[key],
+    name, id: key, width: sizes[key] ?? seenWidths[key],
     onStart: (e: PointerEvent<HTMLElement>) => {
       if (e.button !== 0) return
       e.preventDefault()
@@ -334,9 +404,12 @@ export function DataTable({
     },
     onMove: (e: PointerEvent<HTMLElement>) => {
       const d = drag.current
-      if (d && d.key === key) setSizes({ ...d.base, [key]: clampWidth(key, d.width + e.clientX - d.x) })
+      if (d && d.key === key) setSizes({ ...d.base, [key]: clampFrom(key, d.width + e.clientX - d.x, d.width) })
     },
-    onEnd: () => { drag.current = null },
+    onEnd: () => {
+      if (drag.current && stored != null) writeWidths(stored, lastWidths.current)
+      drag.current = null
+    },
     onKey: (e: KeyboardEvent<HTMLElement>) => {
       if (e.key === 'Enter') {
         e.preventDefault()
@@ -351,7 +424,8 @@ export function DataTable({
       setSizes({ ...base, [key]: next })
     },
     onFit: () => fit(key),
-    onFocus: () => { if (sizes[key] == null) setSizes(complete()) },
+    // the separator reports its value from the moment it has the focus, without giving the columns widths yet
+    onFocus: () => { if (sizes[key] == null) setSeenWidths(measure(false)) },
   })
 
   const span = columns.length + 1
@@ -370,6 +444,7 @@ export function DataTable({
   const reset = () => apply(null, '')
   const bar = typeof toolbar === 'function' ? toolbar({ sort: inEffect, name: sortedName, reset }) : toolbar
   const showSummary = summary && inEffect != null && sortedName != null
+  const showWidthsReset = !!resizable && fixed
 
   const body = (
     <div ref={region} className={cx('kit-data-scroll', className)} role="region" aria-label={caption} tabIndex={0}
@@ -511,7 +586,7 @@ export function DataTable({
     </div>
   )
 
-  if (bar == null && !showSummary) return body
+  if (bar == null && !showSummary && !showWidthsReset) return body
   return (
     <div className="kit-data">
       <div className="kit-data-bar">
@@ -520,6 +595,11 @@ export function DataTable({
             {t('sortedBy', sortedName!, inEffect!.dir)}
             <button type="button" className="kit-data-reset" onClick={reset}>{t('sortReset')}</button>
           </span>
+        )}
+        {showWidthsReset && (
+          <button type="button" className="kit-data-reset kit-data-widths-reset" onClick={() => setSizes({})}>
+            {t('widthsReset')}
+          </button>
         )}
         {bar}
       </div>
