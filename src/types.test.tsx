@@ -56,6 +56,12 @@ export const checks = () => [
   <DataTable key="16" caption="c" sort={{ key: 'a', dir: 'up' }} columns={[]} rows={[]} />,
 ]
 
+export const ways = (
+  <PieceTree label="t" groups={[{ kind: 'road', label: 'r', color: 'red', items: [
+    { id: 'a', letter: 'A', label: 'a', ways: [{ key: 'W>E', title: 'east' }], record: 7 }] }]}
+    onPick={nothing} onPickWay={(_, m, way) => [m.record satisfies number, way satisfies string]} />
+)
+
 export const layer: CircleLayerProps<CirclePoint & { signal: { runs: number } }> = {
   points: [], tip: (p) => p.signal.runs satisfies number,
 }

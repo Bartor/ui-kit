@@ -25,14 +25,21 @@ export interface HotProps {
 export const isHot = (hot: Pick<Hot, 'kind' | 'id'> | null | undefined, kind: string, id: string): boolean =>
   hot?.kind === kind && hot.id === id
 
+/** Whether the hot thing is `target`: the same thing, and the same direction
+ *  of it where both name one. */
+export const isHotTarget = (hot: Hot | null | undefined, target: Hot): boolean =>
+  isHot(hot, target.kind, target.id)
+  && (!target.dir || !hot?.dir || hot.dir === target.dir)
+
 /** Key of a thing in a Set: the pieces left out of a total, say. */
 export const pieceKey = (kind: string, id: string): string => `${kind}:${id}`
 
 /** Handlers that make an element set `hot` - for a mouse only: on touch a tap
- *  would leave it lit. */
-export const hoverProps = (setHot: SetHot | undefined, target: Hot) => (setHot ? {
+ *  would leave it lit. `around` is what it goes back to when the mouse leaves:
+ *  the thing the element is inside of, if any. */
+export const hoverProps = (setHot: SetHot | undefined, target: Hot, around: Hot | null = null) => (setHot ? {
   onPointerEnter: (e: PointerEvent) => { if (e.pointerType === 'mouse') setHot(target) },
-  onPointerLeave: (e: PointerEvent) => { if (e.pointerType === 'mouse') setHot(null) },
+  onPointerLeave: (e: PointerEvent) => { if (e.pointerType === 'mouse') setHot(around) },
 } : {})
 
 /** Makes a non-button clickable by mouse and by keyboard. */

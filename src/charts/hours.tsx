@@ -4,7 +4,8 @@ import {
 } from 'recharts'
 import { axisTick, fmt } from '../core/format.js'
 import { hourLabel, hourSpan } from '../core/hours.js'
-import type { HotProps } from '../core/link.js'
+import { isHotTarget } from '../core/link.js'
+import type { Hot, HotProps } from '../core/link.js'
 import { HAS_HOVER } from '../core/media.js'
 import { t } from '../core/config.js'
 
@@ -63,18 +64,22 @@ export const HourBars = ({ values, hours, color, unit }: HourBarsProps) => (
 export interface StackPiece {
   id: string
   /** Short mark of the piece, before its name. */
-  letter: string
+  letter?: string
   name: string
   /** 24 values, one per hour. */
   values: readonly number[]
   fill: string
   /** Left out of the total, and drawn fainter. */
   out?: boolean
+  /** What it stands for in `hot`, where that is not `kind` and its id: a
+   *  direction of a street, say. */
+  hot?: Hot
 }
 
 interface StackTipProps extends TipContent {
   pieces: readonly StackPiece[]
-  focus: string | null
+  /** Ids of the pointed pieces; none when none is. */
+  focus: readonly string[]
   unit: string
 }
 
@@ -87,9 +92,9 @@ function StackTip({ active, payload, label = 0, pieces, focus, unit }: StackTipP
     <div className="kit-chart-tip stack">
       <b>{hourSpan(label)} · {unit}</b>
       {[...pieces].reverse().map((s) => (
-        <div key={s.id} className={focus && focus !== s.id ? 'dim' : undefined}>
+        <div key={s.id} className={focus.length && !focus.includes(s.id) ? 'dim' : undefined}>
           <i style={{ background: s.fill }} />
-          <span>{s.letter} {s.name}{s.out ? ` (${t('leftOut')})` : ''}</span>
+          <span>{[s.letter, s.name].filter(Boolean).join(' ')}{s.out ? ` (${t('leftOut')})` : ''}</span>
           <em>{fmt(val[s.id] || 0)}</em>
         </div>
       ))}
@@ -107,8 +112,8 @@ export interface StackedHourBarsProps<P extends StackPiece> extends HotProps {
   hours: readonly number[]
   /** What is counted, named in the tooltip. */
   unit: string
-  /** Id of the open piece: its segments stay lit and the rest fade. */
-  current?: string | null
+  /** Id of the open piece, or ids: their segments stay lit and the rest fade. */
+  current?: string | readonly string[] | null
   /** A segment was clicked. */
   onPick?: (piece: P) => void
 }
@@ -122,8 +127,10 @@ export function StackedHourBars<P extends StackPiece>({
   kind, pieces, hours, unit, current, hot, setHot, onPick,
 }: StackedHourBarsProps<P>) {
   const [seg, setSeg] = useState<string | null>(null)
-  const focus = seg || (hot?.kind === kind ? hot.id : null)
-  const lit = (id: string) => (!current && !focus) || id === current || id === focus
+  const target = (s: StackPiece): Hot => s.hot ?? { kind, id: s.id }
+  const focus = seg ? [seg] : pieces.filter((s) => isHotTarget(hot, target(s))).map((s) => s.id)
+  const open: readonly string[] = current == null ? [] : typeof current === 'string' ? [current] : current
+  const lit = (id: string) => (!open.length && !focus.length) || open.includes(id) || focus.includes(id)
   const data = Array.from({ length: 24 }, (_, h): Record<string, number> => Object.fromEntries(
     [['h', h], ...pieces.map((s): [string, number] => [s.id, s.values[h] || 0])]))
   return (
@@ -135,7 +142,7 @@ export function StackedHourBars<P extends StackPiece>({
           content={<StackTip pieces={pieces} focus={focus} unit={unit} />} />
         {pieces.map((s) => (
           <Bar key={s.id} dataKey={s.id} stackId="p" isAnimationActive={false} cursor="pointer"
-            onMouseEnter={() => { setSeg(s.id); if (HAS_HOVER) setHot?.({ kind, id: s.id }) }}
+            onMouseEnter={() => { setSeg(s.id); if (HAS_HOVER) setHot?.(target(s)) }}
             onMouseLeave={() => { setSeg(null); if (HAS_HOVER) setHot?.(null) }}
             onClick={() => onPick?.(s)}>
             {data.map((_, h) => (

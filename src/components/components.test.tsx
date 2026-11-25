@@ -61,4 +61,30 @@ describe('components', () => {
     expect(tree(['road:a']).match(/disabled/g)).toHaveLength(1)
     expect(tree(['road:a'])).toContain('1 of 2')
   })
+
+  it('PieceTree gives each direction a button, and half ticks what is partly out', () => {
+    const tree = (dir?: string, out = false) => html(
+      <PieceTree label="t" root={{ label: 'all', onPick: () => {} }} onToggle={() => {}} onPick={() => {}}
+        onPickWay={() => {}} current={{ kind: 'road', id: 'a', dir }}
+        groups={[{ kind: 'road', label: 'Roads', color: 'red', items: [
+          { id: 'a', letter: 'A', label: 'a', ways: [{ key: 'W>E', title: 'east' }, { key: 'E>W', title: 'west', out }] },
+          { id: 'b', letter: 'B', label: 'b' }] }]} />,
+    )
+    expect(tree().match(/kit-way"/g)).toHaveLength(2)
+    expect(tree()).toContain('<li class="on">')
+    expect(tree('W>E')).toContain('<li class="within">')
+    expect(tree('W>E')).toContain('aria-current="true" class="kit-way on"')
+    expect(tree()).not.toContain('left out')
+    expect(tree(undefined, true)).toContain('1 left out')
+    expect(tree(undefined, true)).toContain('include all')
+  })
+
+  it('DirectionSplit can be picked from, and marks the open direction', () => {
+    const rows = [{ kind: 'road', id: 'A', letter: 'A', name: 'a', dirs: [{ key: 'N>S', v: 4 }, { key: 'S>N', v: 2 }] }]
+    expect(html(<DirectionSplit title="t" rows={rows} />)).not.toContain('role="button"')
+    const out = html(<DirectionSplit title="t" rows={rows} onPick={() => {}}
+      current={{ kind: 'road', id: 'A', dir: 'S>N' }} />)
+    expect(out.match(/role="button"/g)).toHaveLength(2)
+    expect(out).toContain('class="b on pick"')
+  })
 })

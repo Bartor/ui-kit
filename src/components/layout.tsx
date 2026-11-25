@@ -91,6 +91,8 @@ export interface DetailsPanelProps {
   /** Short id, on the colour. */
   pill?: ReactNode
   title: ReactNode
+  /** Under the title: which part of the thing this is, say. */
+  subtitle?: ReactNode
   color?: string
   /** Without it the panel has no close button. */
   onClose?: () => void
@@ -101,7 +103,9 @@ export interface DetailsPanelProps {
 
 /** Details of one selected thing, beside the map; on phones a bottom sheet,
  *  closed by dragging its header down. */
-export function DetailsPanel({ pill, title, color, onClose, actions, children }: DetailsPanelProps) {
+export function DetailsPanel({
+  pill, title, subtitle, color, onClose, actions, children,
+}: DetailsPanelProps) {
   const sheet = useSheetDrag(true, (open) => { if (!open) onClose?.() })
   return (
     <div className={sheet.dy != null ? 'kit-details dragging' : 'kit-details'}
@@ -110,6 +114,7 @@ export function DetailsPanel({ pill, title, color, onClose, actions, children }:
         <div>
           {pill != null && <span className="kit-pill" style={{ background: color }}>{pill}</span>}
           <h3>{title}</h3>
+          {subtitle && <p className="kit-details-sub">{subtitle}</p>}
           {actions}
         </div>
         {onClose && (

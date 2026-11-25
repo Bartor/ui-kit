@@ -17,8 +17,8 @@ export const cameFrom = (side: string): Direction => (OPPOSITE[side] ? `${side}>
 /** Where a direction points, in degrees from north; undefined if it has no compass end. */
 export const bearingOf = (d: Direction): number | undefined => BEARING[d.split('>')[1]]
 
+/** "W>E" -> "→"; empty if it has no compass end. */
+export const dirArrow = (d: Direction): string => ARROW[d.includes('>') ? d.split('>')[1] : d] || ''
+
 /** "W>E" -> "→ W → E". */
-export const dirLabel = (d: Direction): string => {
-  const to = d.includes('>') ? d.split('>')[1] : d
-  return `${ARROW[to] || ''} ${d.replace('>', ' → ')}`.trim()
-}
+export const dirLabel = (d: Direction): string => `${dirArrow(d)} ${d.replace('>', ' → ')}`.trim()

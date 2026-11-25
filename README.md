@@ -78,7 +78,7 @@ On phones the sidebar and the details become bottom sheets by themselves.
 `TextTable`, `ErrorBoundary`
 
 **Controls** — `Panel`, `Field`, `Toggle`, `Pair`, `Select`, `Slider`, `Chips`, `RadioCards`,
-`SearchBox`, `HourRange`, `HelpButton`
+`SearchBox`, `HourRange`, `HelpButton`, `Setting`
 
 **Text** — `Hint`, `Warn`, `Footnote`, `Notes`, `Callout`, `Citation`, `CitePlace`, `Facts`,
 `Fact`, `Partial`, `LinkButton`, `Divider`, `Block`, `Swatch`
@@ -210,7 +210,8 @@ with `--kit-data-bg`, which is the panel colour; set it where the table sits on 
 
 ### Linked highlighting
 
-The tree, the charts, the direction bars and the map dots light each other up.
+The tree, its direction buttons, the charts, the direction bars and the map dots light
+each other up.
 They share one value, `{ kind, id, dir? }` or `null`, kept by the app:
 
 ```tsx

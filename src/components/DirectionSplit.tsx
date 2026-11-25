@@ -2,7 +2,7 @@ import type { PointerEvent, ReactNode } from 'react'
 import { fmt } from '../core/format.js'
 import { dirLabel } from '../core/directions.js'
 import type { Direction } from '../core/directions.js'
-import { isHot } from '../core/link.js'
+import { isHot, pressable } from '../core/link.js'
 import type { HotProps } from '../core/link.js'
 
 /** One street and its ways. */
@@ -20,6 +20,10 @@ export interface DirectionSplitProps extends HotProps {
   title: ReactNode
   /** Those with nothing counted are not listed. */
   rows: readonly DirectionRow[]
+  /** A direction was picked, by its segment or its figure. */
+  onPick?: (row: DirectionRow, dir: Direction) => void
+  /** The open direction. */
+  current?: { kind: string; id: string; dir?: Direction } | null
 }
 
 /**
@@ -31,7 +35,7 @@ export interface DirectionSplitProps extends HotProps {
  * its figure - adds that way as `dir`; PieceDots and HotArrows draw it on the
  * map.
  */
-export function DirectionSplit({ title, rows, hot, setHot }: DirectionSplitProps) {
+export function DirectionSplit({ title, rows, hot, setHot, onPick, current }: DirectionSplitProps) {
   const shown = rows.filter((r) => r.dirs.some((d) => d.v > 0))
   if (!shown.length) return null
   return (
@@ -42,7 +46,8 @@ export function DirectionSplit({ title, rows, hot, setHot }: DirectionSplitProps
         const on = isHot(hot, r.kind, r.id)
         const lit = on ? hot?.dir : undefined
         const cls = (d: { key: Direction }, i: number) => `${i ? 'b' : 'a'}${lit
-          ? (lit === d.key ? ' lit' : ' dim') : ''}`
+          ? (lit === d.key ? ' lit' : ' dim') : ''}${isHot(current, r.kind, r.id)
+          && current?.dir === d.key ? ' on' : ''}${onPick ? ' pick' : ''}`
         // a mouse only: on touch a tap would leave the row lit
         const hover = setHot ? {
           onPointerOver: (e: PointerEvent) => {
@@ -58,12 +63,14 @@ export function DirectionSplit({ title, rows, hot, setHot }: DirectionSplitProps
             <span className="kit-dir-name" title={r.id}>{r.name}</span>
             <div className="kit-dir-bar">
               {r.dirs.map((d, i) => (
-                <i key={d.key} data-dir={d.key} className={cls(d, i)} style={{ flexGrow: d.v }} />
+                <i key={d.key} data-dir={d.key} className={cls(d, i)} style={{ flexGrow: d.v }}
+                  onClick={onPick ? () => onPick(r, d.key) : undefined} />
               ))}
             </div>
             <div className="kit-dir-vals">
               {r.dirs.map((d, i) => (
-                <span key={d.key} data-dir={d.key} className={cls(d, i)}>
+                <span key={d.key} data-dir={d.key} className={cls(d, i)}
+                  {...(onPick ? pressable(() => onPick(r, d.key)) : {})}>
                   {dirLabel(d.key)} <b>{fmt(d.v)}</b> · {sum ? Math.round((100 * d.v) / sum) : 0}%
                 </span>
               ))}

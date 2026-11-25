@@ -205,6 +205,10 @@ export interface ChipItem<K extends string = string> {
   key: K
   label: ReactNode
   on?: boolean
+  /** A dot before the label. */
+  color?: string
+  /** Tooltip. */
+  title?: string
 }
 
 export interface ChipsProps<K extends string = string> {
@@ -212,15 +216,36 @@ export interface ChipsProps<K extends string = string> {
   onPick: (key: K) => void
   /** Closer to what is above. */
   tight?: boolean
+  /** Smaller pills, for a panel. */
+  small?: boolean
+  /** Accessible name of the group. */
+  label?: string
 }
 
 /** Pills to press. */
-export const Chips = <K extends string = string>({ items, onPick, tight }: ChipsProps<K>) => (
-  <div className={tight ? 'kit-chips tight' : 'kit-chips'}>
+export const Chips = <K extends string = string>({ items, onPick, tight, small, label }: ChipsProps<K>) => (
+  <div className={cx('kit-chips', tight && 'tight', small && 'small')}
+    role={label ? 'group' : undefined} aria-label={label}>
     {items.map((c) => (
       <button key={c.key} type="button" className={c.on ? 'kit-chip on' : 'kit-chip'}
-        onClick={() => onPick(c.key)}>{c.label}</button>
+        aria-pressed={!!c.on} title={c.title} onClick={() => onPick(c.key)}>
+        {c.color && <i style={{ background: c.color }} />}
+        {c.label}
+      </button>
     ))}
+  </div>
+)
+
+export interface SettingProps {
+  label: ReactNode
+  children?: ReactNode
+}
+
+/** A control with its label beside it, for a panel. */
+export const Setting = ({ label, children }: SettingProps) => (
+  <div className="kit-setting">
+    <span>{label}</span>
+    {children}
   </div>
 )
 

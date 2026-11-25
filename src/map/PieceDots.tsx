@@ -28,6 +28,8 @@ export interface PieceDot<T = unknown> extends LatLon {
   out?: boolean
   /** Its ways of travel, drawn while it is hot. */
   dirs?: readonly Direction[]
+  /** The open one of them, drawn all the time. */
+  way?: Direction
   /** Text of its tooltip. */
   tip?: ReactNode
 }
@@ -115,7 +117,7 @@ interface DotProps<T> extends PieceDot<T> {
  *  new element under the mouse, which fires mouseout and mouseover again and
  *  flickers. Hover is a class instead. */
 function Dot<T>({
-  kind, id, target, lat, lon, color, letter, square, on, out, dirs, tip, whole,
+  kind, id, target, lat, lon, color, letter, square, on, out, dirs, way, tip, whole,
   hot, hotDir, onPick, setHot,
 }: DotProps<T>) {
   const icon = useMemo(() => L.divIcon({
@@ -144,7 +146,9 @@ function Dot<T>({
       <Marker ref={ref} position={[lat, lon]} zIndexOffset={1000} eventHandlers={handlers} icon={icon}>
         {tip && <Tooltip>{tip}</Tooltip>}
       </Marker>
-      {hot && dirs && <DirArrows lat={lat} lon={lon} dirs={dirs} lit={hotDir} />}
+      {dirs && (hot || way) && (
+        <DirArrows lat={lat} lon={lon} dirs={dirs} lit={hot ? hotDir ?? way : way} />
+      )}
     </>
   )
 }

@@ -43,7 +43,7 @@ const LINES: map.MapLine[] = ([
 ] as const).map(({ key, path, value }) => ({ key, path: path.map(([a, b]): [number, number] => [a, b]), value, color: SPEEDS.color(value) }))
 
 type Place = (typeof PLACES)[number]
-type Selection = { kind: 'node' } | { kind: 'piece'; id: string } | { kind: 'place'; ref: Place }
+type Selection = { kind: 'node' } | { kind: 'piece'; id: string; dir?: string } | { kind: 'place'; ref: Place }
 const PERIODS: HourBounds[] = [[0, 24], [7, 9], [22, 6]]
 const TAGS = [['good', '×1.0'], ['fair', '×1.8'], ['weak', '×2.4']] as const
 
@@ -135,7 +135,8 @@ function App() {
   const toggle = (k: keyof typeof on) => (v: boolean) => setOn({ ...on, [k]: v })
   const slices = useMemo(() => MODES.map((m) => ({ color: m.color, value: m.value })), [])
   const target = useMemo(() => (sel?.kind === 'place' ? sel.ref : null), [sel])
-  const current = sel?.kind === 'piece' ? { kind: 'road', id: sel.id } : null
+  const current = sel?.kind === 'piece' ? { kind: 'road', id: sel.id, dir: sel.dir } : null
+  const openWay = ({ id }: { id: string }, dir: string) => setSel({ kind: 'piece', id, dir })
   const openPiece = ({ id }: { id: string }) => setSel({ kind: 'piece', id })
   const total = MODES.reduce((a, m) => a + m.value, 0)
   const extra = MODES.reduce((a, m) => a + m.extra, 0)
@@ -259,7 +260,7 @@ function App() {
           <map.PieceDots whole={NODE} wholeR={22} hot={hot} setHot={setHot} onPick={openPiece}
             pieces={PIECES.map((p) => ({ kind: 'road', id: p.id, target: p, lat: p.lat, lon: p.lon,
               color: COLOR, letter: p.id, dirs: p.dirs, tip: p.name,
-              on: current?.id === p.id, out: off.has(kit.pieceKey('road', p.id)) }))} />
+              on: current?.id === p.id, way: current?.id === p.id ? current.dir : undefined, out: off.has(kit.pieceKey('road', p.id)) }))} />
         )}
         {on.labels && (
           <map.MapLabels declutter entries={PLACES.map((p) => {
@@ -274,12 +275,14 @@ function App() {
         <kit.ErrorBoundary resetKey={sel.ref.id} onClose={() => setSel(null)}><Broken /></kit.ErrorBoundary>
       )}
       {sel && sel.kind !== 'place' && (
-        <kit.DetailsPanel pill="demo" title="Gallery junction" color={COLOR} onClose={() => setSel(null)}
+        <kit.DetailsPanel pill="demo" title="Gallery junction" subtitle={current?.dir && kit.dirLabel(current.dir)} color={COLOR} onClose={() => setSel(null)}
           actions={<kit.ShareButtons render={card} filename="demo.png" title="ui-kit" text="ui-kit" />}>
           <kit.PieceTree label="Pieces" current={current} off={off} hot={hot} setHot={setHot}
             root={{ label: 'The whole junction', onPick: () => setSel({ kind: 'node' }) }}
             groups={[{ kind: 'road', label: 'Streets', color: COLOR, keepOne: true,
-              items: PIECES.map((p) => ({ id: p.id, letter: p.id, label: p.name, share: '33%' })) }]}
+              items: PIECES.map((p) => ({ id: p.id, letter: p.id, label: p.name, share: '33%',
+                ways: p.dirs.map((key) => ({ key, title: kit.dirLabel(key) })) })) }]}
+            onPickWay={(_, p, dir) => openWay(p, dir)}
             onPick={(_, p) => openPiece(p)}
             onToggle={(keys, out) => setOff((s) => {
               const n = new Set(s)
@@ -309,13 +312,17 @@ function App() {
             <kit.Fact label="Missing" tone="gap">not counted</kit.Fact>
             <kit.Fact label="Whole day" tone="whole">{kit.fmt(total * 8)}</kit.Fact>
           </kit.Facts>
+          <kit.Setting label="Setting">
+            <kit.Chips small label="Modes" onPick={pick.toggle}
+              items={MODES.map((m) => ({ key: m.key, label: m.label, color: m.color, on: pick.pinned.has(m.key) }))} />
+          </kit.Setting>
           <h4>Stacked hours</h4>
           <StackedHourBars kind="road" hours={hours} unit="people" current={current?.id} hot={hot} setHot={setHot}
             onPick={openPiece} pieces={PIECES.map((p, i) => ({ id: p.id, letter: p.id, name: p.name,
               values: p.values, fill: kit.shade(COLOR, i), out: off.has(kit.pieceKey('road', p.id)) }))} />
           <h4>Hours</h4>
           <HourBars values={PIECES[0].values} hours={hours} color={COLOR} unit="people" />
-          <kit.DirectionSplit title="Directions" hot={hot} setHot={setHot} rows={PIECES.map((p) => ({
+          <kit.DirectionSplit title="Directions" hot={hot} setHot={setHot} current={current} onPick={openWay} rows={PIECES.map((p) => ({
             kind: 'road', id: p.id, letter: p.id, name: p.name, dirs: p.dirs.map((key, i) => ({ key, v: p.split[i] })) }))} />
           <kit.Breakdown title="Breakdown" rest="other" parts={{ other: 80, cars: 300, vans: 40 }} />
           <kit.StatBlock title="Tables">

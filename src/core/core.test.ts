@@ -3,7 +3,8 @@ import { configure, t } from './config.js'
 import { axisTick, fixed, fmt, fmtEst, roundEst, slug } from './format.js'
 import { hourRuns, hoursOf, sameRange } from './hours.js'
 import { inkOn, ramp, shade } from './color.js'
-import { bearingOf, cameFrom, dirLabel } from './directions.js'
+import { bearingOf, cameFrom, dirArrow, dirLabel } from './directions.js'
+import { isHotTarget } from './link.js'
 import { csvNumber, toCsv } from './files.js'
 import { arrowsSvg, labelHtml, pieSvg } from './pie.js'
 import { en } from '../strings/en.js'
@@ -85,8 +86,19 @@ describe('directions', () => {
   it('point where the traffic goes', () => {
     expect(dirLabel('W>E')).toBe('→ W → E')
     expect(cameFrom('E')).toBe('E>W')
+    expect([dirArrow('W>E'), dirArrow('NE'), dirArrow('centre')]).toEqual(['→', '↗', ''])
     expect(bearingOf('NE>SW')).toBe(225)
     expect(bearingOf('centre')).toBeUndefined()
+  })
+})
+
+describe('linked highlighting', () => {
+  it('matches a direction only where both name one', () => {
+    const a = { kind: 'road', id: 'a' }
+    expect(isHotTarget(a, { ...a, dir: 'W>E' })).toBe(true)
+    expect(isHotTarget({ ...a, dir: 'W>E' }, a)).toBe(true)
+    expect(isHotTarget({ ...a, dir: 'E>W' }, { ...a, dir: 'W>E' })).toBe(false)
+    expect(isHotTarget(null, a)).toBe(false)
   })
 })
 

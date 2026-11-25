@@ -1,11 +1,24 @@
-import { useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from 'react'
 import { hoverProps, isHot, pieceKey } from '../core/link.js'
+import { dirArrow } from '../core/directions.js'
+import type { Direction } from '../core/directions.js'
 import type { HotProps } from '../core/link.js'
 import { isPhone } from '../core/media.js'
 import { t } from '../core/config.js'
 
 const NONE: ReadonlySet<string> = new Set()
+
+/** A direction of a piece, picked by its own button. */
+export interface PieceWay {
+  key: Direction
+  /** On the button; its arrow unless given. */
+  label?: ReactNode
+  /** Its full name: the tooltip and accessible name. */
+  title: string
+  /** Left out of the whole, while the rest of the piece is not. */
+  out?: boolean
+}
 
 /** A piece in the tree. Add your own fields; onPick gets them back. */
 export interface PieceTreeItem {
@@ -16,6 +29,8 @@ export interface PieceTreeItem {
   title?: string
   /** Its part of the group, as text; a dash for none. */
   share?: string | null
+  /** Its directions, with `onPickWay`. */
+  ways?: readonly PieceWay[]
 }
 
 export interface PieceTreeGroup<I extends PieceTreeItem = PieceTreeItem> {
@@ -48,15 +63,26 @@ export interface PieceTreeProps<I extends PieceTreeItem = PieceTreeItem> extends
   /** The whole; null when there is none to show. */
   root?: { label: ReactNode; onPick: () => void } | null
   groups: readonly PieceTreeGroup<I>[]
-  /** The open piece; null with the whole on show. */
-  current?: { kind: string; id: string } | null
+  /** The open piece, or direction of one; null with the whole on show. */
+  current?: { kind: string; id: string; dir?: Direction } | null
   /** Pieces left out of the whole, as pieceKey()s. */
   off?: ReadonlySet<string>
   onPick: (group: PieceTreeGroup<I>, item: I) => void
+  /** A direction was picked. Without it, pieces have no direction buttons. */
+  onPickWay?: (group: PieceTreeGroup<I>, item: I, way: Direction) => void
   /** Pieces were unticked (`out`) or ticked: one key, or all of a group. With
    *  it and a root, the pieces have checkboxes. */
   onToggle?: (keys: string | string[], out: boolean) => void
   labels?: PieceTreeLabels
+}
+
+/** A checkbox that can be half ticked. */
+function Tick({ half, ...rest }: ComponentPropsWithoutRef<'input'> & { half: boolean }) {
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = half
+  }, [half, rest.checked])
+  return <input ref={ref} type="checkbox" className="kit-check" {...rest} />
 }
 
 /**
@@ -67,7 +93,7 @@ export interface PieceTreeProps<I extends PieceTreeItem = PieceTreeItem> extends
  * sets `hot`, and is lit by it.
  */
 export function PieceTree<I extends PieceTreeItem>({
-  label, root, groups, current, off = NONE, onPick, onToggle, hot, setHot, labels = {},
+  label, root, groups, current, off = NONE, onPick, onPickWay, onToggle, hot, setHot, labels = {},
 }: PieceTreeProps<I>) {
   // On a phone twelve rows fill the sheet before anything else is in sight, so
   // groups start folded - unless they hold the open piece or a left-out one.
@@ -84,7 +110,12 @@ export function PieceTree<I extends PieceTreeItem>({
   // leaving pieces out only means something when they add up to a whole
   const toggle = root ? onToggle : undefined
   const keysOf = (g: PieceTreeGroup<I>) => g.items.map((m) => pieceKey(g.kind, m.id))
-  const nOff = toggle ? groups.flatMap(keysOf).filter((k) => off.has(k)).length : 0
+  // directions left out of pieces that are otherwise in
+  const halves = (g: PieceTreeGroup<I>) => g.items
+    .filter((m) => !off.has(pieceKey(g.kind, m.id)))
+    .flatMap((m) => m.ways?.filter((w) => w.out) ?? []).length
+  const nOff = toggle ? groups.flatMap(keysOf).filter((k) => off.has(k)).length
+    + groups.reduce((a, g) => a + halves(g), 0) : 0
   return (
     <nav className="kit-tree" aria-label={label}>
       {root && (
@@ -109,7 +140,7 @@ export function PieceTree<I extends PieceTreeItem>({
                   {g.label}
                   <em>{left < keys.length ? t('treeSome', left, keys.length) : keys.length}</em>
                 </button>
-                {toggle && left < keys.length && (
+                {toggle && (left < keys.length || halves(g) > 0) && (
                   <button type="button" onClick={() => toggle(keys, false)}>
                     {t('treeIncludeAll')}
                   </button>
@@ -120,13 +151,16 @@ export function PieceTree<I extends PieceTreeItem>({
               {g.items.map((m, i) => {
                 const out = !!toggle && off.has(keys[i])
                 const last = !out && left === 1 && !!g.keepOne
-                const on = isHot(current, g.kind, m.id)
+                const open = isHot(current, g.kind, m.id)
+                const way = open ? current?.dir : undefined
+                const on = open && !way
+                const half = !!toggle && !out && !!m.ways?.some((w) => w.out)
                 return (
                   <li key={m.id} {...hoverProps(setHot, { kind: g.kind, id: m.id })}
-                    className={`${on ? 'on' : ''}${out ? ' out' : ''}`
+                    className={`${on ? 'on' : ''}${way ? 'within' : ''}${out ? ' out' : ''}`
                       + `${isHot(hot, g.kind, m.id) ? ' hot' : ''}`}>
                     {toggle && (
-                      <input type="checkbox" className="kit-check" checked={!out} disabled={last}
+                      <Tick half={half} checked={!out} disabled={last}
                         style={{ '--c': g.color } as CSSProperties}
                         aria-label={labels.include ? labels.include(m.id) : t('treeInclude', m.id)}
                         title={last ? labels.last || t('treeLast')
@@ -140,6 +174,20 @@ export function PieceTree<I extends PieceTreeItem>({
                       <span>{m.label}</span>
                       <em>{out ? t('leftOut') : m.share ?? '—'}</em>
                     </button>
+                    {onPickWay && m.ways && m.ways.length > 0 && (
+                      <div className="kit-ways">
+                        {m.ways.map((w) => (
+                          <button key={w.key} type="button" title={w.title} aria-label={w.title}
+                            aria-current={way === w.key ? 'true' : undefined}
+                            className={`kit-way${way === w.key ? ' on' : ''}${w.out ? ' out' : ''}`
+                              + `${isHot(hot, g.kind, m.id) && hot?.dir === w.key ? ' hot' : ''}`}
+                            {...hoverProps(setHot, { kind: g.kind, id: m.id, dir: w.key }, { kind: g.kind, id: m.id })}
+                            onClick={() => onPickWay(g, m, w.key)}>
+                            {w.label ?? dirArrow(w.key)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </li>
                 )
               })}
