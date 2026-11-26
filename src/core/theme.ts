@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 export type Theme = 'light' | 'dark'
-const KEY = 'kit-theme'
+// only a theme someone picked is kept: the default can change under it
+const KEY = 'kit-theme-picked'
 
-/** The theme chosen here before, or the one asked for. */
-export function storedTheme(fallback: Theme = 'light'): Theme {
+/** The theme picked here before, or the one asked for. */
+export function storedTheme(fallback: Theme = 'dark'): Theme {
   try {
     const v = localStorage.getItem(KEY)
     if (v === 'light' || v === 'dark') return v
@@ -18,19 +19,20 @@ export function applyTheme(theme: Theme): void {
 }
 
 /**
- * The page's theme, light unless said otherwise, kept for the next visit. The
- * first value is applied before the first paint when this runs at the top of
- * the app.
+ * The page's theme: the one picked before, else the fallback. It is applied
+ * before the first paint when this runs at the top of the app, and a theme
+ * set through it is kept for the next visit.
  */
-export function useTheme(fallback: Theme = 'light'): [Theme, (t: Theme) => void] {
-  const [theme, setTheme] = useState<Theme>(() => {
+export function useTheme(fallback: Theme = 'dark'): [Theme, (t: Theme) => void] {
+  const [theme, setState] = useState<Theme>(() => {
     const t = storedTheme(fallback)
     applyTheme(t)
     return t
   })
-  useEffect(() => {
-    applyTheme(theme)
-    try { localStorage.setItem(KEY, theme) } catch { /* storage can be off */ }
-  }, [theme])
+  const setTheme = useCallback((t: Theme) => {
+    applyTheme(t)
+    setState(t)
+    try { localStorage.setItem(KEY, t) } catch { /* storage can be off */ }
+  }, [])
   return [theme, setTheme]
 }
