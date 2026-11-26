@@ -21,6 +21,8 @@ export const en: Strings = {
   bandsHint: 'Bands under the slider: the hours each visible layer was measured in - '
     + 'a gap means no data. Hover a band for details.',
 
+  theme: 'Theme',
+  themes: { light: 'light', dark: 'dark' },
   legend: 'Legend',
   foldLegend: 'Fold the legend',
 

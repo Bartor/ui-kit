@@ -13,6 +13,7 @@ export * from './core/pie.js'
 export * from './core/card.js'
 export * from './core/sort.js'
 export * from './core/widths.js'
+export * from './core/theme.js'
 
 export * from './components/layout.js'
 export * from './components/text.js'

@@ -21,6 +21,9 @@ export interface Strings {
   bandTitle: (label: string, spans: string, note?: string) => string
   bandsHint: string
 
+  theme: string
+  /** Names of the themes: light, dark. */
+  themes: Record<string, string>
   legend: string
   foldLegend: string
 

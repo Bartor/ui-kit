@@ -21,6 +21,8 @@ export const pl: Strings = {
   bandsHint: 'Paski pod suwakiem: godziny objęte pomiarem dla widocznych warstw — '
     + 'przerwa oznacza brak danych. Najedź na pasek po szczegóły.',
 
+  theme: 'Motyw',
+  themes: { light: 'jasny', dark: 'ciemny' },
   legend: 'Legenda',
   foldLegend: 'Zwiń legendę',
 

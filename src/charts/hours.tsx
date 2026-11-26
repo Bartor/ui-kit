@@ -9,7 +9,8 @@ import type { Hot, HotProps } from '../core/link.js'
 import { HAS_HOVER } from '../core/media.js'
 import { t } from '../core/config.js'
 
-const CURSOR = { fill: 'rgba(255, 255, 255, .06)' }
+// in the colour of the text, so that it shows on either theme
+const CURSOR = { fill: 'currentColor', fillOpacity: 0.07 }
 // Tooltips sit above the chart, pinned to its top edge and lifted by their own
 // height in CSS, so they never cover the bars they describe.
 const TIP = { position: { y: 0 }, allowEscapeViewBox: { x: false, y: true }, wrapperStyle: { zIndex: 5 } }
